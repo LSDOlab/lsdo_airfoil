@@ -8,9 +8,6 @@ from lsdo_airfoil.utils.compute_stall_angle import get_stall_interpolants
 from lsdo_airfoil.core.airfoil_models import ClModel, CdModel, CmModel, CpLowerModel, CpUpperModel 
 
 
-import torch
-
-
 X_min_numpy = np.array([
                 -3.87714524e-03, -6.21114345e-03, -3.65010835e-03, -5.48448414e-04,
                 1.04316720e-03, -3.44090629e-04,  -1.91351119e-03, -2.22159643e-03,
