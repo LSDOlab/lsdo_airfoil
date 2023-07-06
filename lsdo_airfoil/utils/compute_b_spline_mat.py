@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 
 
 def compute_b_spline_mat(num_pts):

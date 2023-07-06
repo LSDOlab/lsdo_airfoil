@@ -18,7 +18,7 @@ def get_airfoil_models():
     
     for model in scalar_valued_models:
         neural_net_model = scaler_valued_nn_model
-        neural_net_model.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/{model}_model'))
+        neural_net_model.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/{model}_model', map_location=torch.device('cpu')))
         neural_net_model.eval()
         neural_net_model.requires_grad_(False)
         neural_net_model_dict[model] = copy.deepcopy(neural_net_model)
@@ -32,8 +32,8 @@ def get_airfoil_models():
         neural_net_upper_model.requires_grad_(False)
         neural_net_lower_model.requires_grad_(False)
 
-        neural_net_upper_model.load_state_dict(torch.load(MODELS_FOLDER / f'vector_valued_regressions/{model}_upper_model'))
-        neural_net_lower_model.load_state_dict(torch.load(MODELS_FOLDER / f'vector_valued_regressions/{model}_lower_model'))
+        neural_net_upper_model.load_state_dict(torch.load(MODELS_FOLDER / f'vector_valued_regressions/{model}_upper_model', map_location=torch.device('cpu')))
+        neural_net_lower_model.load_state_dict(torch.load(MODELS_FOLDER / f'vector_valued_regressions/{model}_lower_model', map_location=torch.device('cpu')))
 
         neural_net_model_dict[f"{model}_upper"] = copy.deepcopy(neural_net_upper_model)
         neural_net_model_dict[f"{model}_lower"] = copy.deepcopy(neural_net_lower_model)

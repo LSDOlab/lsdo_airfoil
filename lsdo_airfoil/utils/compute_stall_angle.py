@@ -79,13 +79,13 @@ def get_stall_interpolants(cl_model, cd_model, airfoil_name, num_pts_alfa=50, nu
 
 if __name__ == '__main__':
     cl_neural_net_model = copy.deepcopy(scaler_valued_nn_model)
-    cl_neural_net_model.load_state_dict(torch.load(f'/home/marius/Desktop/packages/lsdo_lab/lsdo_airfoil/lsdo_airfoil/models/scalar_valued_regressions/Cl_model'))
+    cl_neural_net_model.load_state_dict(torch.load(f'/home/marius/Desktop/packages/lsdo_lab/lsdo_airfoil/lsdo_airfoil/models/scalar_valued_regressions/Cl_model', map_location=torch.device('cpu')))
     cl_neural_net_model.eval()
     cl_neural_net_model.requires_grad_(False)
 
 
     cd_neural_net_model = copy.deepcopy(scaler_valued_nn_model)
-    cd_neural_net_model.load_state_dict(torch.load(f'/home/marius/Desktop/packages/lsdo_lab/lsdo_airfoil/lsdo_airfoil/models/scalar_valued_regressions/Cd_model'))
+    cd_neural_net_model.load_state_dict(torch.load(f'/home/marius/Desktop/packages/lsdo_lab/lsdo_airfoil/lsdo_airfoil/models/scalar_valued_regressions/Cd_model', map_location=torch.device('cpu')))
     cd_neural_net_model.eval()
     cd_neural_net_model.requires_grad_(False)
 
