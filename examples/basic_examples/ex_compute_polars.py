@@ -3,8 +3,6 @@ from python_csdl_backend import Simulator
 from lsdo_airfoil.core.airfoil_model_csdl import AirfoilModelCSDL
 import csdl
 import numpy as np
-from modopt.scipy_library import SLSQP
-from modopt.csdl_library import CSDLProblem
 from lsdo_airfoil.utils.compute_b_spline_mat import compute_b_spline_mat
 from lsdo_airfoil import AIRFOIL_COORDINATES_FOLDER
 import matplotlib.pyplot as plt
@@ -37,9 +35,9 @@ plt.axis('equal')
 plt.legend()
 
 
-num_nodes = 50
-M = 0.2
-AoA = np.linspace(-5, 20, num_nodes) 
+num_nodes = 80
+M = 0.
+AoA = np.linspace(-90, 90, num_nodes) 
 Re =  1e6
 
 
@@ -60,8 +58,8 @@ run_model.create_input('airfoil_lower', val=lower_interp)
 
 airfoil_model = AirfoilModelCSDL(
     num_nodes=num_nodes,
-    compute_control_points=True,
-    airfoil_name='boeing_vertol_vr_12',
+    compute_control_points=False,
+    airfoil_name='Clark_y',
     airfoil_raw_shape=(301, )
 )
 run_model.add(airfoil_model, 'airfoil_model')

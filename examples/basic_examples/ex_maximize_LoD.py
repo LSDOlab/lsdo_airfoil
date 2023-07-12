@@ -9,7 +9,7 @@ from modopt.csdl_library import CSDLProblem
 
 num_nodes = 1
 M = 0
-AoA = 2 
+AoA = 6 
 Re =  1e6
 
 run_model = csdl.Model()
@@ -18,7 +18,7 @@ run_model.create_input('angle_of_attack', AoA) #  * np.ones((num_nodes, )))
 run_model.create_input('reynolds_number', Re * np.ones((num_nodes, )))
 
 run_model.add_design_variable('mach_number', lower=0., upper=0.6)
-run_model.add_design_variable('angle_of_attack', scaler=3e-2, lower=2, upper=10)
+run_model.add_design_variable('angle_of_attack', scaler=3e-2, lower=2, upper=60)
 run_model.add_design_variable('reynolds_number', scaler=0.5e-6, lower=1e5, upper=1e6)
 
 
@@ -39,6 +39,8 @@ run_model.add_objective('LoD', scaler=-1e-2)
 sim = Simulator(run_model)
 sim.run()
 
+sim.check_totals(of='LoD', wrt='angle_of_attack', step=1e-3)
+
 prob = CSDLProblem(problem_name='airfoil_ml_test', simulator=sim)
 optimizer = SLSQP(
     prob,
@@ -57,7 +59,7 @@ print(sim['reynolds_number'])
 print(sim['LoD'])
 
 
-# sim.check_partials()
+
 # exit()
 
 # print('\n')
