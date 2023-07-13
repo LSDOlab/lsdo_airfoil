@@ -7,30 +7,21 @@ import copy
 from torch import nn
 
 
-# cl_model = nn.Sequential(
-#             nn.Linear(35, 180), nn.ReLU(),
-#             nn.Linear(180, 180), nn.ReLU(),
-#             nn.Linear(180, 160), nn.SELU(),
-#             nn.Linear(160, 140), nn.SELU(),
-#             nn.Linear(140, 120), nn.SELU(),
-#             nn.Linear(120, 120), nn.ReLU(),
-#             nn.Linear(120, 100), nn.GELU(),
-#             nn.Linear(100, 80), nn.ReLU(),
-#             nn.Linear(80, 50), nn.ReLU(),
-#             nn.Linear(50, 1),
-# )
+cl_ivnerse_model = nn.Sequential(
+            nn.Linear(35, 150), nn.GELU(),
+            nn.Linear(150, 150), nn.GELU(),
+            nn.Linear(150, 200), nn.ReLU(),
+            # nn.Dropout(0.2),
+            nn.Linear(200, 200), nn.GELU(),
+            nn.Linear(200, 200), nn.ELU(),
+            nn.Linear(200, 200), nn.GELU(),
+            # nn.Dropout(0.2),
+            nn.Linear(200, 200), nn.GELU(),
+            nn.Linear(200, 120), nn.GELU(),
+            nn.Linear(120, 100), nn.GELU(),
+            nn.Linear(100, 1),
+)
 
-
-# cl_model = nn.Sequential(
-#             nn.Linear(35, 180), nn.ReLU(),
-#             nn.Linear(180, 160), nn.SELU(),
-#             nn.Linear(160, 140), nn.SELU(),
-#             nn.Linear(140, 120), nn.SELU(),
-#             nn.Linear(120, 120), nn.ReLU(),
-#             nn.Linear(120, 100), nn.GELU(),
-#             nn.Linear(100, 80), nn.LeakyReLU(),
-#             nn.Linear(80, 1),
-# )
 
 cl_model = cd_model = nn.Sequential(
             nn.Linear(35, 140), nn.ReLU(),
@@ -51,21 +42,26 @@ hidden_dim_rnn = 128
 output_dim_rnn = 100
 num_layers_rnn = 1
 
-def get_airfoil_models():    
+def get_airfoil_models(scaler_valued_models=[], vector_valued_models=[]):    
     scalar_valued_models = ['Cd'] #['Cl', 'Cd']#, 'Cm']
-    vector_valued_models = ['Cp', 'Ue', 'delta_star', 'theta']
+    # vector_valued_models = ['Cp', 'Ue', 'delta_star', 'theta']
     
     cl_net = cl_model
-    cl_net.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/Cl_num_epoch_1300_batch_size_250_lr_0001_NEW_2nd_extrapolated_data_attempt_2'))
+    cl_net.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/Cl_num_epoch_1300_batch_size_250_lr_0001_NEW_2nd_extrapolated_data_attempt_2', map_location=torch.device('cpu')))
     cl_net.eval()
     cl_net.requires_grad_(False)
     neural_net_model_dict['Cl'] = copy.deepcopy(cl_net)
 
     cd_net = cd_model
-    cd_net.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/Cd_num_epoch_1000_batch_size_250_lr_0001_NEW_2nd_extrapolated_data_attempt_1'))
+    cd_net.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/Cd_num_epoch_1000_batch_size_250_lr_0001_NEW_2nd_extrapolated_data_attempt_1', map_location=torch.device('cpu')))
     cd_net.eval()
     cd_net.requires_grad_(False)
     neural_net_model_dict['Cd'] = copy.deepcopy(cd_net)
+
+    cl_ivnerse_model.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/Cl_inverse_model', map_location=torch.device('cpu')))
+    cl_ivnerse_model.eval()
+    cl_ivnerse_model.requires_grad_(False)
+    neural_net_model_dict['Cl_inverse'] = copy.deepcopy(cl_ivnerse_model)
 
     # for model in scalar_valued_models:
     #     neural_net_model = scaler_valued_nn_model
@@ -93,3 +89,31 @@ def get_airfoil_models():
 
 
 
+
+
+# cl_ivnerse_model = nn.Sequential(
+#             nn.Linear(35, 180), nn.ReLU(),
+#             nn.Linear(180, 160), nn.SELU(),
+#             nn.Linear(160, 140), nn.SELU(),
+#             nn.Linear(140, 120), nn.SELU(),
+#             nn.Linear(120, 120), nn.ReLU(),
+#             nn.Linear(120, 100), nn.GELU(),
+#             nn.Linear(100, 80), nn.LeakyReLU(),
+#             nn.Linear(80, 1),
+# )
+
+# cl_ivnerse_model = scaler_valued_nn_model
+
+
+# cl_ivnerse_model = nn.Sequential(
+#             nn.Linear(35, 180), nn.ReLU(),
+#             nn.Linear(180, 180), nn.ReLU(),
+#             nn.Linear(180, 160), nn.SELU(),
+#             nn.Linear(160, 140), nn.SELU(),
+#             nn.Linear(140, 120), nn.SELU(),
+#             nn.Linear(120, 120), nn.ReLU(),
+#             nn.Linear(120, 100), nn.GELU(),
+#             nn.Linear(100, 80), nn.ReLU(),
+#             nn.Linear(80, 50), nn.ReLU(),
+#             nn.Linear(50, 1),
+# )
