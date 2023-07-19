@@ -253,7 +253,7 @@ class ClInverseModelCSDL(Model):
             model.register_output(f'{prefix}_residual', res)
 
             solve_residual = self.create_implicit_operation(model)
-            solve_residual.declare_state(f'{prefix}_angle_of_attack', residual=f'{prefix}_residual', bracket=(-10., 15.))
+            solve_residual.declare_state(f'{prefix}_angle_of_attack', residual=f'{prefix}_residual', bracket=(-40., 30.))
 
             X_min = self.declare_variable(f'{prefix}_X_min', shape=(num_nodes, 35))
             X_max = self.declare_variable(f'{prefix}_X_max', shape=(num_nodes, 35))
@@ -330,7 +330,8 @@ class CpModelCSDL(ModuleCSDL):
         self.parameters.declare('airfoil_name', types=str, allow_none=True)
         self.parameters.declare('compute_control_points', types=bool, default=True)
         self.parameters.declare('use_inverse_cl_map', types=bool)
-        self.parameters.declare('m3l_var_list', types=list, allow_none=True)
+        self.parameters.declare('m3l_var_list_cl', types=list, allow_none=True)
+        self.parameters.declare('m3l_var_list_re', types=list, allow_none=True)
 
     def define(self):
         airfoil_raw_shape = self.parameters['airfoil_raw_shape']
@@ -341,17 +342,29 @@ class CpModelCSDL(ModuleCSDL):
         compute_control_points = self.parameters['compute_control_points']
 
         use_inverse_cl_map = self.parameters['use_inverse_cl_map']
-        m3l_var_list = self.parameters['m3l_var_list']
+        m3l_var_list_cl = self.parameters['m3l_var_list_cl']
+        m3l_var_list_re = self.parameters['m3l_var_list_re']
         
         if use_inverse_cl_map is True:
-            if (m3l_var_list is not None) and len(m3l_var_list)>0:
-                for m3l_var in m3l_var_list:
+            if (m3l_var_list_cl is not None) and len(m3l_var_list_cl)>0:
+                counter = 0
+                for m3l_var in m3l_var_list_cl:
                     m3l_var_name = m3l_var.name
+                    m3l_var_name_re = m3l_var_list_re[counter].name
+                    counter += 1
+                    # print(m3l_var_name.split("_")[0])
+                    # print(m3l_var_name_re.split("_")[0])
+                    # exit()
+
                     shape = m3l_var.shape
                     num_nodes = shape[0] * shape[1]
 
                     cl_from_vlm = self.declare_variable(m3l_var_name, shape=shape)
                     Cl = self.register_output(f'{m3l_var_name}_lift_coefficient', csdl.reshape(cl_from_vlm, new_shape=(num_nodes, )))
+
+                    re_from_vlm = self.declare_variable(m3l_var_name_re, shape=shape)
+                    Re = self.register_output(f'{m3l_var_name}_reynolds_number', csdl.reshape(re_from_vlm, new_shape=(num_nodes, )))
+
 
                     cl_inverse_model = ClInverseModelCSDL(
                         num_nodes=num_nodes,
@@ -373,8 +386,8 @@ class CpModelCSDL(ModuleCSDL):
                         val=X_max_numpy_prestall,
                     ), (num_nodes, 35), 'i->ji') 
                 
-                    M = self.declare_variable(f'{m3l_var_name}_mach_number', shape=(num_nodes, ), val=0)
-                    Re = self.declare_variable(f'{m3l_var_name}_reynolds_number', shape=(num_nodes, ), val=1e6)
+                    M = self.declare_variable(f'{m3l_var_name}_mach_number', shape=(num_nodes, ), val=0.17)
+                    # Re = self.declare_variable(f'{m3l_var_name}_reynolds_number', shape=(num_nodes, ), val=1e6)
                     alpha = self.declare_variable(f'{m3l_var_name}_angle_of_attack', shape=(num_nodes, ))
                     control_points_exp = self.declare_variable(f'{m3l_var_name}_control_points_exp', shape=(num_nodes, 32))
 

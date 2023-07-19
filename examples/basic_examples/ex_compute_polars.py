@@ -35,6 +35,9 @@ plt.axis('equal')
 plt.legend()
 
 
+exit()
+
+
 num_nodes = 80
 M = 0.
 AoA = np.linspace(-90, 90, num_nodes) 
@@ -59,7 +62,7 @@ run_model.create_input('airfoil_lower', val=lower_interp)
 airfoil_model = AirfoilModelCSDL(
     num_nodes=num_nodes,
     compute_control_points=False,
-    airfoil_name='Clark_y',
+    airfoil_name='NASA_langley_ga_1',
     airfoil_raw_shape=(301, )
 )
 run_model.add(airfoil_model, 'airfoil_model')

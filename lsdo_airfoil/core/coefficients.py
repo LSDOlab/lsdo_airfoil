@@ -22,3 +22,4 @@ class DragCoefficient(m3l.ExplicitOperation):
     
     def evaluate(self) -> tuple:
         return super().evaluate()
+    
