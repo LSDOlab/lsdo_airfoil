@@ -79,8 +79,11 @@ class NodalPressureProfile(m3l.ExplicitOperation):
         csdl_module = ModuleCSDL()
 
         for i in range(len(surface_names)):
-            num_nodes = surface_shapes[i][1]-1
             name = surface_names[i]
+            if 'tail' in name:
+                num_nodes = surface_shapes[i][1] - 1
+            else:
+                num_nodes = surface_shapes[i][1]
             ml_pressures_upper = csdl_module.register_module_input(f'{name.split("_")[0]}_cp_upper', shape=(num_nodes, 100))
             ml_pressures_lower = csdl_module.register_module_input(f'{name.split("_")[0]}_cp_lower', shape=(num_nodes, 100))
     
@@ -105,14 +108,17 @@ class NodalPressureProfile(m3l.ExplicitOperation):
 
         oml_pressures_upper = []
         oml_pressures_lower = []
+        shapes = [(100, 24), (100, 8)]
         for i in range(len(surface_names)):
             surface_name = surface_names[i].split("_")[0]
-            shape = (surface_shapes[i][0], surface_shapes[i][1])
-
+            # shape = (surface_shapes[i][0], surface_shapes[i][1])
+            shape = shapes[i]
+            print(shape)
             oml_pressure_upper = m3l.Variable(name=f'{surface_name}_oml_cp_upper', shape=shape, operation=self)
             oml_pressure_lower = m3l.Variable(name=f'{surface_name}_oml_cp_lower', shape=shape, operation=self)
 
             oml_pressures_upper.append(oml_pressure_upper)
             oml_pressures_lower.append(oml_pressure_lower)
-
+        
+        # exit()
         return oml_pressures_upper, oml_pressures_lower

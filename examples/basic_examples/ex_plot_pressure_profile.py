@@ -16,7 +16,7 @@ num_nodes = 1
 M = 0.6 
 AoA = 2 #np.linspace(-8, 15, num_nodes) 
 Cl = 0.5
-Re =  1e5
+Re =  1e6
 
 pressure_profile = PressureProfile(
     airfoil_name='Clark_y',
@@ -33,9 +33,14 @@ run_model.add_design_variable('mach_number', lower=0., upper=0.6)
 # run_model.add_design_variable('angle_of_attack', scaler=3e-2, lower=2, upper=10)
 run_model.add_design_variable('reynolds_number', scaler=0.5e-6, lower=1e5, upper=1e6)
 
+# cp_upper = run_model.declare_variable('CpUpper', shape=(100, ))
+# run_model.print_var(cp_upper * 1)
 
-sim = Simulator(run_model)
+
+sim = Simulator(run_model, analytics=True)
 sim.run()
+
+sim.check_totals(of='CpLower', wrt='lift_coefficient', step=1e-2)
 
 Cp_upper = sim['CpUpper']
 Cp_lower = sim['CpLower']
@@ -43,6 +48,8 @@ Cp_lower = sim['CpLower']
 print(sim['angle_of_attack'])
 print(sim['lift_coefficient'])
 print(sim['Cl'])
+print(sim['Cd'])
+print(Cp_upper.shape)
 
 num_pts = 100
 x_range = np.linspace(0, 1, num_pts)

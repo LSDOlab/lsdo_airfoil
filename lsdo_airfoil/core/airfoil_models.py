@@ -206,16 +206,17 @@ class CpUpperModel(csdl.CustomExplicitOperation):
             outputs['CpUpper'] = neural_net(neural_net_input).detach().numpy().flatten()
 
     def compute_derivatives(self, inputs, derivatives):
+        num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
         prefix = self.parameters['prefix']
 
         if prefix:
             neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_cp'], dtype=torch.float32, requires_grad=True)
-            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
             derivatives[f'{prefix}_CpUpper', f'{prefix}_neural_net_input_cp'] =  derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
         else:
             neural_net_input = torch.tensor(inputs['neural_net_input_cp'], dtype=torch.float32, requires_grad=True)
-            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
             derivatives['CpUpper', 'neural_net_input_cp'] =  derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
 
 class CpLowerModel(csdl.CustomExplicitOperation):
@@ -255,18 +256,19 @@ class CpLowerModel(csdl.CustomExplicitOperation):
             outputs['CpLower'] = neural_net(neural_net_input).detach().numpy().flatten()
 
     def compute_derivatives(self, inputs, derivatives):
+        num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
         prefix = self.parameters['prefix']
 
         if prefix:
             neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_cp'], dtype=torch.float32, requires_grad=True)
-            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
             derivatives[f'{prefix}_CpLower', f'{prefix}_neural_net_input_cp'] =  derivative_numpy 
         
         else:
             neural_net_input = torch.tensor(inputs['neural_net_input_cp'], dtype=torch.float32, requires_grad=True)
 
-            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
             derivatives['CpLower', 'neural_net_input_cp'] = derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
 
 

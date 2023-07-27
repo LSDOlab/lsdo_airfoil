@@ -491,6 +491,28 @@ class CpModelCSDL(ModuleCSDL):
                 )
                 self.register_output('CpLower', cp_lower)
 
+                X_min_poststall = csdl.expand(self.declare_variable(
+                        name=f'X_min_poststall_cd',    
+                        val=X_min_numpy_poststall
+                    ), (num_nodes, 35), 'i->ji')
+
+
+                X_max_poststall = csdl.expand(self.declare_variable(
+                    name=f'X_max_poststall_cd',
+                    val=X_max_numpy_poststall,
+                ), (num_nodes, 35), 'i->ji') 
+                
+                scaled_inputs_post_stall = (inputs - X_min_poststall) / (X_max_poststall - X_min_poststall)
+                x = self.register_output(f'neural_net_input_extrap', scaled_inputs_post_stall)
+
+                cd = csdl.custom(x, op=CdModel(
+                        neural_net=neural_net_dict['Cd'],
+                        num_nodes=num_nodes,
+                    )
+                )
+                self.register_output(f'Cd', cd)
+                self.register_output(f'cd', csdl.reshape(cd, new_shape=(num_nodes, 1)))
+
 
         else:
             if compute_control_points:
