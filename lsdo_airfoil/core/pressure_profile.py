@@ -108,7 +108,7 @@ class NodalPressureProfile(m3l.ExplicitOperation):
 
         oml_pressures_upper = []
         oml_pressures_lower = []
-        shapes = [(100, 20)]
+        shapes = [(100, surface_shapes[0][1])]
         for i in range(len(surface_names)):
             surface_name = surface_names[i].split("_")[0]
             # shape = (surface_shapes[i][0], surface_shapes[i][1])
