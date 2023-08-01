@@ -253,7 +253,7 @@ class ClInverseModelCSDL(Model):
             model.register_output(f'{prefix}_residual', res)
 
             solve_residual = self.create_implicit_operation(model)
-            solve_residual.declare_state(f'{prefix}_angle_of_attack', residual=f'{prefix}_residual', bracket=(-40., 30.))
+            solve_residual.declare_state(f'{prefix}_angle_of_attack', residual=f'{prefix}_residual', bracket=(-10., 15.))
 
             X_min = self.declare_variable(f'{prefix}_X_min', shape=(num_nodes, 35))
             X_max = self.declare_variable(f'{prefix}_X_max', shape=(num_nodes, 35))
@@ -389,6 +389,7 @@ class CpModelCSDL(ModuleCSDL):
                     M = self.declare_variable(f'{m3l_var_name}_mach_number', shape=(num_nodes, ), val=0.17)
                     # Re = self.declare_variable(f'{m3l_var_name}_reynolds_number', shape=(num_nodes, ), val=1e6)
                     alpha = self.declare_variable(f'{m3l_var_name}_angle_of_attack', shape=(num_nodes, ))
+                    self.print_var(alpha)
                     control_points_exp = self.declare_variable(f'{m3l_var_name}_control_points_exp', shape=(num_nodes, 32))
 
                     inputs = self.create_output(f'{m3l_var_name}_airfoil_inputs_cp', shape=(num_nodes, 35), val=0)
