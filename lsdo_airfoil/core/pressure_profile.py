@@ -108,7 +108,7 @@ class NodalPressureProfile(m3l.ExplicitOperation):
 
         oml_pressures_upper = []
         oml_pressures_lower = []
-        shapes = [(100, surface_shapes[0][1])]
+        shapes = [(surface_shapes[0][1],100)]
         for i in range(len(surface_names)):
             surface_name = surface_names[i].split("_")[0]
             # shape = (surface_shapes[i][0], surface_shapes[i][1])
@@ -127,7 +127,7 @@ class NodalForces(m3l.ExplicitOperation):
     def initialize(self, kwargs):
         pass
 
-    def evaluate(self, oml_pressures_upper:m3l.Variable, oml_pressures_lower:m3l.Variable, normals_upper:m3l.Variable, normals_lower:m3l.Variable, upper_ml_mesh, lower_ml_mesh, upper_ml_vlm_mesh, lower_ml_vlm_mesh) -> tuple:
+    def evaluate(self, vlm_F:m3l.Variable, oml_pressures_upper:m3l.Variable, oml_pressures_lower:m3l.Variable, normals_upper:m3l.Variable, normals_lower:m3l.Variable, upper_ml_mesh, lower_ml_mesh, upper_ml_vlm_mesh, lower_ml_vlm_mesh) -> tuple:
         self.name = 'ml_nodal_force_evaluation'
         
         self.upper_ml_mesh = upper_ml_mesh
@@ -136,13 +136,14 @@ class NodalForces(m3l.ExplicitOperation):
         self.lower_ml_vlm_mesh = lower_ml_vlm_mesh
         
         self.arguments = {}
+        self.arguments['vlm_F'] = vlm_F
         self.arguments['oml_pressures_upper'] = oml_pressures_upper
         self.arguments['oml_pressures_lower'] = oml_pressures_lower
         self.arguments['normals_upper'] = normals_upper
         self.arguments['normals_lower'] = normals_lower
 
-        ml_f_upper = m3l.Variable('ml_f_upper', shape=oml_pressures_upper.shape, operation=self)
-        ml_f_lower = m3l.Variable('ml_f_lower', shape=oml_pressures_lower.shape, operation=self)
+        ml_f_upper = m3l.Variable('ml_f_upper', shape=oml_pressures_upper.shape+(3,), operation=self)
+        ml_f_lower = m3l.Variable('ml_f_lower', shape=oml_pressures_lower.shape+(3,), operation=self)
         return ml_f_upper, ml_f_lower
 
     def compute(self):
@@ -154,10 +155,13 @@ class NodalForces(m3l.ExplicitOperation):
 
         csdl_module = ModuleCSDL()
 
+        vlm_F_csdl = csdl_module.register_module_input('vlm_F', shape=self.arguments['vlm_F'].shape)
         pressures_upper_csdl = csdl_module.register_module_input('oml_pressures_upper', shape=self.arguments['oml_pressures_upper'].shape)
         pressures_lower_csdl = csdl_module.register_module_input('oml_pressures_lower', shape=self.arguments['oml_pressures_lower'].shape)
         normals_upper_csdl = csdl_module.register_module_input('normals_upper', shape=self.arguments['normals_upper'].shape)
         normals_lower_csdl = csdl_module.register_module_input('normals_lower', shape=self.arguments['normals_lower'].shape)
+
+        output_shape = pressures_upper_csdl.shape + (3,)
 
         # upper_ml_mesh_csdl = csdl_module.register_module_input('upper_ml_mesh', shape=upper_ml_mesh.shape, val=upper_ml_mesh)
         # lower_ml_mesh_csdl = csdl_module.register_module_input('lower_ml_mesh', shape=lower_ml_mesh.shape, val=lower_ml_mesh)
@@ -183,8 +187,20 @@ class NodalForces(m3l.ExplicitOperation):
         areas_upper_csdl = csdl_module.register_module_input('areas_upper', shape=areas_upper.shape, val=areas_upper)
         areas_lower_csdl = csdl_module.register_module_input('areas_lower', shape=areas_lower.shape, val=areas_lower)
 
-        forces_upper = csdl.expand(areas_upper_csdl*pressures_upper_csdl,(100,40,3),'ij->ijk')*csdl.reshape(normals_upper_csdl, (100,40,3))
-        forces_lower = csdl.expand(areas_lower_csdl*pressures_lower_csdl,(100,40,3),'ij->ijk')*csdl.reshape(normals_lower_csdl, (100,40,3))
+        # normals_upper_reshaped = csdl_module.create_output('normals_upper_reshaped', shape=(100,40,3))
+        # for i in range(100):
+        #     normals_upper_reshaped[i, :, :] = csdl.expand(normals_upper_csdl[i*40:i*40+40,:], (1, 40,3), 'ij->kij')
+
+        forces_upper = csdl.expand(csdl.reorder_axes(areas_upper_csdl, 'ij->ji')*pressures_upper_csdl,output_shape,'ij->ijk')*csdl.reorder_axes(csdl.reshape(normals_upper_csdl, (output_shape[1],output_shape[0],output_shape[2])),'ijk->jik')
+        forces_lower = -1*csdl.expand(csdl.reorder_axes(areas_lower_csdl, 'ij->ji')*pressures_lower_csdl,output_shape,'ij->ijk')*csdl.reorder_axes(csdl.reshape(normals_lower_csdl, (output_shape[1],output_shape[0],output_shape[2])),'ijk->jik')
+
+        print(vlm_F_csdl.shape)
+
+        force_correction_factor = csdl.reshape(vlm_F_csdl, (3,))/(csdl.sum(forces_upper, axes=(0,1)) + csdl.sum(forces_lower, axes=(0,1)))
+
+        forces_upper = csdl.expand(force_correction_factor, output_shape, 'i->abi')*forces_upper
+        forces_lower = csdl.expand(force_correction_factor, output_shape, 'i->abi')*forces_lower
+
 
         csdl_module.register_module_output('ml_f_upper', forces_upper)
         csdl_module.register_module_output('ml_f_lower', forces_lower)
