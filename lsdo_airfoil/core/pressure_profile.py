@@ -34,8 +34,12 @@ class PressureProfile(m3l.ExplicitOperation):
         
         # return super().compute()
     
-    def evaluate(self, cl_list:list=[], re_list:list=[]) -> tuple:
-        self.name = 'airfoil_ml_model'
+    def evaluate(self, cl_list:list=[], re_list:list=[], design_condition=None) -> tuple:
+        if design_condition:
+            dc_name = design_condition.parameters['name']
+            self.name = f'{dc_name}_airfoil_ml_model'
+        else:
+            self.name = 'airfoil_ml_model'
         self.arguments = {}
         self.m3l_var_list_cl = cl_list
         self.m3l_var_list_re = re_list
@@ -93,12 +97,17 @@ class NodalPressureProfile(m3l.ExplicitOperation):
 
         return csdl_module
 
-    def evaluate(self, ml_pressure_upper, ml_pressure_lower, nodal_pressure_mesh) -> tuple:
+    def evaluate(self, ml_pressure_upper, ml_pressure_lower, nodal_pressure_mesh, design_condition=None) -> tuple:
         surface_names = self.parameters['surface_names']  
         surface_shapes = self.parameters['surface_shapes']
         
         self.nodal_forces_meshes = nodal_pressure_mesh
-        self.name = f"{''.join(surface_names)}_ml_pressure_mapping_model"
+        if design_condition:
+            dc_name = design_condition.parameters['name']
+            self.name = f"{dc_name}_{''.join(surface_names)}_ml_pressure_mapping_model"
+        else:
+            self.name = f"{''.join(surface_names)}_ml_pressure_mapping_model"
+        
         self.arguments = {}
 
         for i in range(len(surface_names)):

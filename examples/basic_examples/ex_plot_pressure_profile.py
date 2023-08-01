@@ -13,13 +13,13 @@ mpl.rcParams['text.usetex'] = False
 
 
 num_nodes = 1
-M = 0.6 
+M = 0.2
 AoA = 2 #np.linspace(-8, 15, num_nodes) 
 Cl = 0.5
-Re =  1e6
+Re =  4e6
 
 pressure_profile = PressureProfile(
-    airfoil_name='Clark_y',
+    airfoil_name='NASA_langley_ga_1',
     num_nodes=num_nodes,
     use_inverse_cl_map=True,
 )
