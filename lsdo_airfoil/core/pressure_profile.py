@@ -122,3 +122,86 @@ class NodalPressureProfile(m3l.ExplicitOperation):
         
         # exit()
         return oml_pressures_upper, oml_pressures_lower
+    
+class NodalForces(m3l.ExplicitOperation):
+    def initialize(self, kwargs):
+        pass
+
+    def evaluate(self, oml_pressures_upper:m3l.Variable, oml_pressures_lower:m3l.Variable, normals_upper:m3l.Variable, normals_lower:m3l.Variable, upper_ml_mesh, lower_ml_mesh, upper_ml_vlm_mesh, lower_ml_vlm_mesh) -> tuple:
+        self.name = 'ml_nodal_force_evaluation'
+        
+        self.upper_ml_mesh = upper_ml_mesh
+        self.lower_ml_mesh = lower_ml_mesh
+        self.upper_ml_vlm_mesh = upper_ml_vlm_mesh
+        self.lower_ml_vlm_mesh = lower_ml_vlm_mesh
+        
+        self.arguments = {}
+        self.arguments['oml_pressures_upper'] = oml_pressures_upper
+        self.arguments['oml_pressures_lower'] = oml_pressures_lower
+        self.arguments['normals_upper'] = normals_upper
+        self.arguments['normals_lower'] = normals_lower
+
+        ml_f_upper = m3l.Variable('ml_f_upper', shape=oml_pressures_upper.shape, operation=self)
+        ml_f_lower = m3l.Variable('ml_f_lower', shape=oml_pressures_lower.shape, operation=self)
+        return ml_f_upper, ml_f_lower
+
+    def compute(self):
+        # just going to use static values for now, switch to get_map etc later
+        upper_ml_mesh = self.upper_ml_mesh.value
+        lower_ml_mesh = self.lower_ml_mesh.value
+        upper_ml_vlm_mesh = self.upper_ml_vlm_mesh.value
+        lower_ml_vlm_mesh = self.lower_ml_vlm_mesh.value
+
+        csdl_module = ModuleCSDL()
+
+        pressures_upper_csdl = csdl_module.register_module_input('oml_pressures_upper', shape=self.arguments['oml_pressures_upper'].shape)
+        pressures_lower_csdl = csdl_module.register_module_input('oml_pressures_lower', shape=self.arguments['oml_pressures_lower'].shape)
+        normals_upper_csdl = csdl_module.register_module_input('normals_upper', shape=self.arguments['normals_upper'].shape)
+        normals_lower_csdl = csdl_module.register_module_input('normals_lower', shape=self.arguments['normals_lower'].shape)
+
+        # upper_ml_mesh_csdl = csdl_module.register_module_input('upper_ml_mesh', shape=upper_ml_mesh.shape, val=upper_ml_mesh)
+        # lower_ml_mesh_csdl = csdl_module.register_module_input('lower_ml_mesh', shape=lower_ml_mesh.shape, val=lower_ml_mesh)
+        # upper_ml_vlm_mesh_csdl = csdl_module.register_module_input('upper_ml_vlm_mesh', shape=upper_ml_vlm_mesh.shape, val=upper_ml_vlm_mesh)
+        # lower_ml_vlm_mesh_csdl = csdl_module.register_module_input('lower_ml_vlm_mesh', shape=lower_ml_vlm_mesh.shape, val=lower_ml_vlm_mesh)
+
+        upper_full_distances = np.linalg.norm(upper_ml_mesh[0:-1,:,:]-upper_ml_mesh[1:,:,:], axis=2)
+        dist_upper = np.zeros(upper_ml_mesh.shape[0:2])
+        dist_upper[0:-1,:] = upper_full_distances/2
+        dist_upper[1:,:] += upper_full_distances/2
+        
+        lower_full_distances = np.linalg.norm(lower_ml_mesh[0:-1,:,:]-lower_ml_mesh[1:,:,:], axis=2)
+        dist_lower = np.zeros(lower_ml_mesh.shape[0:2])
+        dist_lower[0:-1,:] = lower_full_distances/2
+        dist_lower[1:,:] += lower_full_distances/2
+
+        width_upper = np.linalg.norm(upper_ml_vlm_mesh[:,0:-1,:]-upper_ml_vlm_mesh[:,1:,:], axis=2)
+        width_lower = np.linalg.norm(lower_ml_vlm_mesh[:,0:-1,:]-lower_ml_vlm_mesh[:,1:,:], axis=2)
+
+        areas_upper = np.multiply(dist_upper,width_upper)
+        areas_lower = np.multiply(dist_lower,width_lower)
+
+        areas_upper_csdl = csdl_module.register_module_input('areas_upper', shape=areas_upper.shape, val=areas_upper)
+        areas_lower_csdl = csdl_module.register_module_input('areas_lower', shape=areas_lower.shape, val=areas_lower)
+
+        forces_upper = csdl.expand(areas_upper_csdl*pressures_upper_csdl,(100,40,3),'ij->ijk')*csdl.reshape(normals_upper_csdl, (100,40,3))
+        forces_lower = csdl.expand(areas_lower_csdl*pressures_lower_csdl,(100,40,3),'ij->ijk')*csdl.reshape(normals_lower_csdl, (100,40,3))
+
+        csdl_module.register_module_output('ml_f_upper', forces_upper)
+        csdl_module.register_module_output('ml_f_lower', forces_lower)
+
+        return csdl_module
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
