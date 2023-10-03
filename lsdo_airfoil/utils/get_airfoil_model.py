@@ -36,6 +36,16 @@ cl_model = cd_model = nn.Sequential(
             nn.Linear(50, 1),
 )
 
+cm_model = nn.Sequential(
+            nn.Linear(35, 180), nn.ReLU(),
+            nn.Linear(180, 160), nn.ReLU(),
+            nn.Linear(160, 140), nn.ReLU(),
+            nn.Linear(140, 120), nn.ReLU(),
+            nn.Linear(120, 100), nn.ReLU(),
+            nn.Linear(100, 80), nn.ReLU(),
+            nn.Linear(80, 1),
+)
+
 neural_net_model_dict = dict()
 input_dim = 35
 hidden_dim_rnn = 128
@@ -57,6 +67,12 @@ def get_airfoil_models(scaler_valued_models=[], vector_valued_models=[]):
     cd_net.eval()
     cd_net.requires_grad_(False)
     neural_net_model_dict['Cd'] = copy.deepcopy(cd_net)
+
+    cm_net = cm_model
+    cm_net.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/Cm_model', map_location=torch.device('cpu')))
+    cm_net.eval()
+    cm_net.requires_grad_(False)
+    neural_net_model_dict['Cm'] = copy.deepcopy(cm_net)
 
     cl_ivnerse_model.load_state_dict(torch.load(MODELS_FOLDER / f'scalar_valued_regressions/Cl_inverse_model', map_location=torch.device('cpu')))
     cl_ivnerse_model.eval()

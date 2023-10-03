@@ -63,6 +63,7 @@ sim.run()
 # Aerodynamic coefficients
 Cl = sim['cl_model.Cl']
 Cd = sim['cd_model.Cd']
+Cm = sim['cm_model.Cm']
 
 # Pressure coefficient
 Cp_upper = sim['cp_model.cp_upper']

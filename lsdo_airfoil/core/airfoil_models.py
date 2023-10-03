@@ -118,28 +118,54 @@ class CdModel(csdl.CustomExplicitOperation):
 
 class CmModel(csdl.CustomExplicitOperation):
     def initialize(self):
-        # The neural net will be a pre-trained model
-        self.parameters.declare('num_nodes')
+        self.parameters.declare('num_nodes', types=int)
         self.parameters.declare('neural_net')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+
 
     def define(self):
-        self.add_input('neural_net_input', shape=(1, 35))
-        self.add_output('Cm')
+        num_nodes = self.parameters['num_nodes']
+        prefix = self.parameters['prefix']
 
-        # self.declare_derivatives('*', '*')
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_Cm', shape=(num_nodes, ))
+            self.declare_derivatives(f'{prefix}_Cm', f'{prefix}_neural_net_input')
+        
+        else:
+            self.add_input('neural_net_input', shape=(num_nodes, 35))
+            self.add_output('Cm', shape=(num_nodes, ))
+            self.declare_derivatives('Cm', 'neural_net_input')
+
     
     def compute(self, inputs, outputs):
-        neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'])
-        outputs['Cm'] = neural_net(neural_net_input).detach().numpy().flatten()
+        neural_net = self.parameters['neural_net']        
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input'])
+            neural_net_prediction = neural_net(neural_net_input).detach().numpy()
+            outputs[f'{prefix}_Cm'] =  neural_net_prediction.flatten() #cl_output 
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input'])
+            neural_net_prediction = neural_net(neural_net_input).detach().numpy()
+            outputs['Cm'] =  neural_net_prediction # Cm_output 
+        
 
     def compute_derivatives(self, inputs, derivatives):
-        neural_net = self.parameters['neural_net']
-        neural_net_input = torch.tensor(inputs['neural_net_input'], dtype=torch.float32, requires_grad=True)
-        outputs = neural_net(neural_net_input)
+        neural_net = self.parameters['neural_net']        
+        prefix = self.parameters['prefix']
 
-        derivatives['Cm', 'neural_net_input'] =  torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
-
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input'])
+            first_derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivatives[f'{prefix}_Cm', f'{prefix}_neural_net_input'] =  first_derivative_numpy
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input'])
+            first_derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivatives['Cm', 'neural_net_input'] = first_derivative_numpy #scipy.linalg.block_diag(*derivatives_list)#
 
 class InverseCl(csdl.CustomExplicitOperation):
     def initialize(self):
