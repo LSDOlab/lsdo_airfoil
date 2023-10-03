@@ -34,6 +34,30 @@ X_max_numpy_prestall = np.array([
                 )
 
 
+X_max_numpy_poststall = np.array([
+                1.64971128e-03, 5.25048282e-03, 1.47131169e-02, 3.03167850e-02,
+                4.73764949e-02, 6.15255609e-02, 7.35139325e-02, 8.21573734e-02,
+                8.81158486e-02, 9.02919322e-02, 8.93072858e-02, 8.19384754e-02,
+                7.00145736e-02, 5.29626682e-02, 3.25598940e-02, 1.39800459e-02,
+                1.76265929e-02, 4.02436182e-02, 7.17813671e-02, 1.06165685e-01,
+                1.40150547e-01, 1.67483926e-01, 1.88060194e-01, 2.04852015e-01,
+                2.15405628e-01, 2.26217642e-01, 2.21330181e-01, 1.99092031e-01,
+                1.54896125e-01, 1.00657888e-01, 4.71989214e-02, 1.23437112e-02,
+                90., 8.00000000e+06, 6.00000000e-01]
+                )
+
+X_min_numpy_poststall = np.array([
+                -3.87714524e-03, -6.21114345e-03, -3.65010835e-03, -5.48448414e-04,
+                1.04316720e-03, -3.44090629e-04,  -1.91351119e-03, -2.22159643e-03,
+                -2.74770800e-03, -4.31647711e-03, -5.94483502e-03, -9.50526167e-03,
+                -1.18035562e-02, -1.22448076e-02, -8.20550136e-03, -3.83688067e-03,
+                -2.66918913e-04,  5.67624951e-03,  1.92390252e-02,  2.55834870e-02,
+                3.14692594e-02,  3.43126804e-02,   3.81270386e-02,  4.34582904e-02,
+                4.47864607e-02,  4.02273424e-02,   3.80498208e-02,  2.97566336e-02,
+                2.03249976e-02,  1.10881981e-02,   4.26956685e-03, -5.45227900e-04,
+                -90.00000000e+00,  1.00000000e+05,  0.00000000e+00]
+            )
+
 class SMLAirfoil(m3l.ExplicitOperation):
     """
     Subsonic machine learning arifoil operation.
@@ -75,6 +99,15 @@ class SMLAirfoil(m3l.ExplicitOperation):
         )
         parent_model.add(edge_velocity_model, 'edge_velocity_model', promotes=[])
         
+        cl_model = ClModelCSDL(
+            num_nodes=self.num_nodes,
+        )
+        parent_model.add(cl_model, 'cl_model', promotes=[])
+
+        cd_model = CdModelCSDL(
+            num_nodes=self.num_nodes,
+        )
+        parent_model.add(cd_model, 'cd_model', promotes=[])
 
         parent_model.connect('mach_number', 'cp_model.mach_number')
         parent_model.connect('reynolds_number', 'cp_model.reynolds_number')
@@ -95,6 +128,16 @@ class SMLAirfoil(m3l.ExplicitOperation):
         parent_model.connect('reynolds_number', 'edge_velocity_model.reynolds_number')
         parent_model.connect('angle_of_attack', 'edge_velocity_model.angle_of_attack')
         parent_model.connect('control_points', 'edge_velocity_model.control_points')
+
+        parent_model.connect('mach_number', 'cl_model.mach_number')
+        parent_model.connect('reynolds_number', 'cl_model.reynolds_number')
+        parent_model.connect('angle_of_attack', 'cl_model.angle_of_attack')
+        parent_model.connect('control_points', 'cl_model.control_points')
+
+        parent_model.connect('mach_number', 'cd_model.mach_number')
+        parent_model.connect('reynolds_number', 'cd_model.reynolds_number')
+        parent_model.connect('angle_of_attack', 'cd_model.angle_of_attack')
+        parent_model.connect('control_points', 'cd_model.control_points')
 
         return parent_model
 
@@ -315,3 +358,90 @@ class EdgeVelocityCSDL(csdl.Model):
             )
         )
         self.register_output('edge_velocity_lower', edge_velocity_lower)
+
+
+class ClModelCSDL(csdl.Model):
+    def initialize(self):
+        self.parameters.declare('num_nodes', types=int)
+
+    def define(self):
+        
+        neural_net_dict = get_airfoil_models(scaler_valued_models=['Cl'])
+        num_nodes = self.parameters['num_nodes']
+        control_points = self.declare_variable('control_points', shape=(32, 1))
+
+        X_min_poststall = csdl.expand(self.declare_variable(
+            name='X_min_poststall',    
+            val=X_min_numpy_poststall
+        ), (num_nodes, 35), 'i->ji')
+
+
+        X_max_poststall = csdl.expand(self.declare_variable(
+            name='X_max_poststall',
+            val=X_max_numpy_poststall,
+        ), (num_nodes, 35), 'i->ji') 
+
+        M = self.declare_variable('mach_number', shape=(num_nodes, ))
+        Re = self.declare_variable('reynolds_number', shape=(num_nodes, ))
+        AoA = self.declare_variable('angle_of_attack', shape=(num_nodes, ))
+        control_points_exp = csdl.expand(csdl.reshape(control_points, (32, )), (num_nodes, 32), 'i->ji')
+
+        inputs = self.create_output('airfoil_inputs', shape=(num_nodes, 35), val=0)
+        inputs[:, 0:32] = control_points_exp
+        inputs[:, 32] = csdl.reshape(AoA, (num_nodes, 1))
+        inputs[:, 33] = csdl.reshape(Re, (num_nodes, 1))
+        inputs[:, 34] = csdl.reshape(M, (num_nodes, 1))
+
+        scaled_inputs_poststall = (inputs - X_min_poststall) / (X_max_poststall - X_min_poststall)
+        x_extrap = self.register_output('neural_net_input_extrap', scaled_inputs_poststall)
+
+        cl = csdl.custom(x_extrap, op=ClModel(
+                neural_net=neural_net_dict['Cl'],
+                num_nodes=num_nodes,     
+            )
+        )
+        self.register_output('Cl', cl)
+
+
+
+class CdModelCSDL(csdl.Model):
+    def initialize(self):
+        self.parameters.declare('num_nodes', types=int)
+
+    def define(self):
+        
+        neural_net_dict = get_airfoil_models(scaler_valued_models=['Cd'])
+        num_nodes = self.parameters['num_nodes']
+        control_points = self.declare_variable('control_points', shape=(32, 1))
+
+        X_min_poststall = csdl.expand(self.declare_variable(
+            name='X_min_poststall',    
+            val=X_min_numpy_poststall
+        ), (num_nodes, 35), 'i->ji')
+
+
+        X_max_poststall = csdl.expand(self.declare_variable(
+            name='X_max_poststall',
+            val=X_max_numpy_poststall,
+        ), (num_nodes, 35), 'i->ji') 
+
+        M = self.declare_variable('mach_number', shape=(num_nodes, ))
+        Re = self.declare_variable('reynolds_number', shape=(num_nodes, ))
+        AoA = self.declare_variable('angle_of_attack', shape=(num_nodes, ))
+        control_points_exp = csdl.expand(csdl.reshape(control_points, (32, )), (num_nodes, 32), 'i->ji')
+
+        inputs = self.create_output('airfoil_inputs', shape=(num_nodes, 35), val=0)
+        inputs[:, 0:32] = control_points_exp
+        inputs[:, 32] = csdl.reshape(AoA, (num_nodes, 1))
+        inputs[:, 33] = csdl.reshape(Re, (num_nodes, 1))
+        inputs[:, 34] = csdl.reshape(M, (num_nodes, 1))
+
+        scaled_inputs_poststall = (inputs - X_min_poststall) / (X_max_poststall - X_min_poststall)
+        x_extrap = self.register_output('neural_net_input_extrap', scaled_inputs_poststall)
+
+        cd = csdl.custom(x_extrap, op=CdModel(
+                neural_net=neural_net_dict['Cd'],
+                num_nodes=num_nodes,     
+            )
+        )
+        self.register_output('Cd', cd)

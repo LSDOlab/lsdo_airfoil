@@ -43,4 +43,6 @@ def plot_distributions(sim):
     axs[1, 1].plot(x_interp, edge_vel_lower)
     axs[1, 1].set_ylabel('Edge velocity')
 
+    plt.suptitle(f"Cl = {sim['cl_model.Cl'].flatten()}" + '\n' +f"Cd = {sim['cd_model.Cd'].flatten()}")
+
     plt.show()

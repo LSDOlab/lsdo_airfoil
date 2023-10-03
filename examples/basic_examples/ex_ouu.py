@@ -60,6 +60,10 @@ sim = Simulator(run_model, analytics=True)
 sim.run()
 
 # Access the variables of interest (separate outputs for upper and lower airfoil curve)
+# Aerodynamic coefficients
+Cl = sim['cl_model.Cl']
+Cd = sim['cd_model.Cd']
+
 # Pressure coefficient
 Cp_upper = sim['cp_model.cp_upper']
 Cp_lower = sim['cp_model.cp_lower']
