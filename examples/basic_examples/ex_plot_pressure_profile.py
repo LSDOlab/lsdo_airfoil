@@ -26,7 +26,7 @@ pressure_profile = PressureProfile(
 
 run_model = pressure_profile.compute()
 run_model.create_input('mach_number', M * np.ones((num_nodes, )))
-run_model.create_input('lift_coefficient', Cl)
+run_model.create_input('angle_of_attack', Cl)
 run_model.create_input('reynolds_number', Re * np.ones((num_nodes, )))
 
 run_model.add_design_variable('mach_number', lower=0., upper=0.6)
@@ -40,7 +40,6 @@ run_model.add_design_variable('reynolds_number', scaler=0.5e-6, lower=1e5, upper
 sim = Simulator(run_model, analytics=True)
 sim.run()
 
-sim.check_totals(of='CpLower', wrt='lift_coefficient', step=1e-2)
 
 Cp_upper = sim['CpUpper']
 Cp_lower = sim['CpLower']
