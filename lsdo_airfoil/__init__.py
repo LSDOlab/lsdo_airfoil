@@ -6,3 +6,7 @@ _REPO_ROOT_FOLDER = Path(__file__).parents[0]
 CONTROL_POINTS_FOLDER = _REPO_ROOT_FOLDER / 'core' / 'sample_airfoils' / 'control_points'
 AIRFOIL_COORDINATES_FOLDER = _REPO_ROOT_FOLDER / 'core' / 'sample_airfoils' / 'raw_data'
 MODELS_FOLDER = _REPO_ROOT_FOLDER / 'core' / 'models'
+UIUC_AIRFOILS = _REPO_ROOT_FOLDER / 'core' / 'parameterization' / 'coord_seligFmt'
+UIUC_AIRFOILS_2 = _REPO_ROOT_FOLDER / 'core' / 'parameterization' / 'uiuc_airfoils'
+UIUC_INTERPOLATION = _REPO_ROOT_FOLDER / 'core' / 'parameterization'
+

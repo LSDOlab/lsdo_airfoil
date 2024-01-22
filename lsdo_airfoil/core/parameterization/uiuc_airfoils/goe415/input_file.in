@@ -1,0 +1,14 @@
+LOAD goe415_interpolated.txt
+goe415
+PANE
+OPER
+Visc 1000000.0
+M 0.3
+PACC
+polar_file_5.txt
+
+ITER 200
+alfa 3
+
+
+quit
