@@ -81,7 +81,168 @@ X_max_numpy_inverse_cl = np.array([
                 2.085, 8.00000000e+06, 6.00000000e-01])
 
 
+class LiftDragCoefficientsCSDL(Model):
+    def initialize(self):
+        self.parameters.declare('num_nodes', types=int)
+        self.parameters.declare('airfoil_raw_shape', types=tuple, default=None, allow_none=True)
+        self.parameters.declare('airfoil_name', types=str, allow_none=True)
+        self.parameters.declare('compute_control_points', types=bool, default=True)
+
+    def define(self):
+        airfoil_raw_shape = self.parameters['airfoil_raw_shape']
+        airfoil_name = self.parameters['airfoil_name']
+        
+        neural_net_dict = get_airfoil_models(scaler_valued_models=['Cl', 'Cd'])
+        num_nodes = self.parameters['num_nodes']
+
+        compute_control_points = self.parameters['compute_control_points']
+        if compute_control_points:
+            airfoil_upper = self.declare_variable('airfoil_upper', shape=airfoil_raw_shape)
+            airfoil_lower = self.declare_variable('airfoil_lower', shape=airfoil_raw_shape)
+
+            airfoil_camber = self.register_output('airfoil_camber', 0.5 * (airfoil_upper + airfoil_lower))
+            airfoil_thickness = self.register_output('airfoil_thickness', ((airfoil_upper - airfoil_lower)**2)**0.5)
+
+            cpts_camber, cpts_thickness_raw = csdl.custom(airfoil_camber, airfoil_thickness, op=CoordinateProcessing(airfoil_raw_shape=airfoil_raw_shape))
+            self.register_output('control_points_camber', cpts_camber)
+            self.register_output('control_points_thickness_raw', cpts_thickness_raw)
+
+            cpts_thickness_raw_declared = self.declare_variable('control_points_thickness_raw', shape=(18, 1))
+            cpts_thickness = (cpts_thickness_raw_declared**2)**0.5
+            self.register_output('control_points_thickness', cpts_thickness)
+       
+
+            control_points = self.create_output('control_points', shape=(32, 1), val=0)
+            control_points[0:16, 0] = cpts_camber[1:17, 0]
+            control_points[16:, 0] = cpts_thickness[1:17, 0]
+
+        else:
+            available_airfoils = ['boeing_vertol_vr_12', 'Clark_y', 'NACA_4412', 'NASA_langley_ga_1']
+            if airfoil_name not in available_airfoils:
+                raise Exception(f"Unknown airfoil '{airfoil_name}'. Pre-computed camber and thickness B-spline control points exist for the following airfoils: {available_airfoils}")
+            else:
+                control_points_numpy = np.load(CONTROL_POINTS_FOLDER / f'{airfoil_name}.npy')
+                control_points = self.create_input('control_points', shape=(32, 1), val=control_points_numpy)
+                self.add_design_variable('control_points', lower=-0.5, upper=0.5)
+
+
+        X_min_poststall = csdl.expand(self.declare_variable(
+            name='X_min_poststall',    
+            val=X_min_numpy_poststall
+        ), (num_nodes, 35), 'i->ji')
+
+
+        X_max_poststall = csdl.expand(self.declare_variable(
+            name='X_max_poststall',
+            val=X_max_numpy_poststall,
+        ), (num_nodes, 35), 'i->ji') 
+
+        M = self.declare_variable('mach_number', shape=(num_nodes, ))
+        Re = self.declare_variable('reynolds_number', shape=(num_nodes, ))
+        AoA = self.declare_variable('angle_of_attack', shape=(num_nodes, ))
+        control_points_exp = csdl.expand(csdl.reshape(control_points, (32, )), (num_nodes, 32), 'i->ji')
+
+        inputs = self.create_output('airfoil_inputs', shape=(num_nodes, 35), val=0)
+        inputs[:, 0:32] = control_points_exp
+        inputs[:, 32] = csdl.reshape(AoA, (num_nodes, 1))
+        inputs[:, 33] = csdl.reshape(Re, (num_nodes, 1))
+        inputs[:, 34] = csdl.reshape(M, (num_nodes, 1))
+
+        scaled_inputs_poststall = (inputs - X_min_poststall) / (X_max_poststall - X_min_poststall)
+        x_extrap = self.register_output('neural_net_input_extrap', scaled_inputs_poststall)
+
+        cl = csdl.custom(x_extrap, op=ClModel(
+                neural_net=neural_net_dict['Cl'],
+                num_nodes=num_nodes,     
+            )
+        )
+        self.register_output('Cl', cl)
+
+        cd = csdl.custom(x_extrap, op=CdModel(
+                neural_net=neural_net_dict['Cd'],
+                num_nodes=num_nodes,     
+            )
+        )
+        self.register_output('Cd', cd)
+
+
 class ClModelCSDL(Model):
+    def initialize(self):
+        self.parameters.declare('num_nodes', types=int)
+        self.parameters.declare('airfoil_raw_shape', types=tuple, default=None, allow_none=True)
+        self.parameters.declare('airfoil_name', types=str, allow_none=True)
+        self.parameters.declare('compute_control_points', types=bool, default=True)
+
+    def define(self):
+        airfoil_raw_shape = self.parameters['airfoil_raw_shape']
+        airfoil_name = self.parameters['airfoil_name']
+        
+        neural_net_dict = get_airfoil_models(scaler_valued_models=['Cl'])
+        num_nodes = self.parameters['num_nodes']
+
+        compute_control_points = self.parameters['compute_control_points']
+        if compute_control_points:
+            airfoil_upper = self.declare_variable('airfoil_upper', shape=airfoil_raw_shape)
+            airfoil_lower = self.declare_variable('airfoil_lower', shape=airfoil_raw_shape)
+
+            airfoil_camber = self.register_output('airfoil_camber', 0.5 * (airfoil_upper + airfoil_lower))
+            airfoil_thickness = self.register_output('airfoil_thickness', ((airfoil_upper - airfoil_lower)**2)**0.5)
+
+            cpts_camber, cpts_thickness_raw = csdl.custom(airfoil_camber, airfoil_thickness, op=CoordinateProcessing(airfoil_raw_shape=airfoil_raw_shape))
+            self.register_output('control_points_camber', cpts_camber)
+            self.register_output('control_points_thickness_raw', cpts_thickness_raw)
+
+            cpts_thickness_raw_declared = self.declare_variable('control_points_thickness_raw', shape=(18, 1))
+            cpts_thickness = (cpts_thickness_raw_declared**2)**0.5
+            self.register_output('control_points_thickness', cpts_thickness)
+       
+
+            control_points = self.create_output('control_points', shape=(32, 1), val=0)
+            control_points[0:16, 0] = cpts_camber[1:17, 0]
+            control_points[16:, 0] = cpts_thickness[1:17, 0]
+
+        else:
+            available_airfoils = ['boeing_vertol_vr_12', 'Clark_y', 'NACA_4412', 'NASA_langley_ga_1']
+            if airfoil_name not in available_airfoils:
+                raise Exception(f"Unknown airfoil '{airfoil_name}'. Pre-computed camber and thickness B-spline control points exist for the following airfoils: {available_airfoils}")
+            else:
+                control_points_numpy = np.load(CONTROL_POINTS_FOLDER / f'{airfoil_name}.npy')
+                control_points = self.create_input('control_points', shape=(32, 1), val=control_points_numpy)
+
+        X_min_poststall = csdl.expand(self.declare_variable(
+            name='X_min_poststall',    
+            val=X_min_numpy_poststall
+        ), (num_nodes, 35), 'i->ji')
+
+
+        X_max_poststall = csdl.expand(self.declare_variable(
+            name='X_max_poststall',
+            val=X_max_numpy_poststall,
+        ), (num_nodes, 35), 'i->ji') 
+
+        M = self.declare_variable('mach_number', shape=(num_nodes, ))
+        Re = self.declare_variable('reynolds_number', shape=(num_nodes, ))
+        AoA = self.declare_variable('angle_of_attack', shape=(num_nodes, ))
+        control_points_exp = csdl.expand(csdl.reshape(control_points, (32, )), (num_nodes, 32), 'i->ji')
+
+        inputs = self.create_output('airfoil_inputs', shape=(num_nodes, 35), val=0)
+        inputs[:, 0:32] = control_points_exp
+        inputs[:, 32] = csdl.reshape(AoA, (num_nodes, 1))
+        inputs[:, 33] = csdl.reshape(Re, (num_nodes, 1))
+        inputs[:, 34] = csdl.reshape(M, (num_nodes, 1))
+
+        scaled_inputs_poststall = (inputs - X_min_poststall) / (X_max_poststall - X_min_poststall)
+        x_extrap = self.register_output('neural_net_input_extrap', scaled_inputs_poststall)
+
+        cl = csdl.custom(x_extrap, op=ClModel(
+                neural_net=neural_net_dict['Cl'],
+                num_nodes=num_nodes,     
+            )
+        )
+        self.register_output('Cl', cl)
+
+
+class CdModelCSDL(Model):
     def initialize(self):
         self.parameters.declare('num_nodes', types=int)
         self.parameters.declare('airfoil_raw_shape', types=tuple, default=None, allow_none=True)

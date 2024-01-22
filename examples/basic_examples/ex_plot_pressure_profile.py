@@ -15,7 +15,7 @@ mpl.rcParams['text.usetex'] = False
 num_nodes = 1
 M = 0.2
 AoA = 2 #np.linspace(-8, 15, num_nodes) 
-Cl = 0.5
+Cl = 0.8
 Re =  4e6
 
 pressure_profile = PressureProfile(
