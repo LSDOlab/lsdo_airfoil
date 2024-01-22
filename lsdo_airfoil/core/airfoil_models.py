@@ -118,28 +118,54 @@ class CdModel(csdl.CustomExplicitOperation):
 
 class CmModel(csdl.CustomExplicitOperation):
     def initialize(self):
-        # The neural net will be a pre-trained model
-        self.parameters.declare('num_nodes')
+        self.parameters.declare('num_nodes', types=int)
         self.parameters.declare('neural_net')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+
 
     def define(self):
-        self.add_input('neural_net_input', shape=(1, 35))
-        self.add_output('Cm')
+        num_nodes = self.parameters['num_nodes']
+        prefix = self.parameters['prefix']
 
-        # self.declare_derivatives('*', '*')
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_Cm', shape=(num_nodes, ))
+            self.declare_derivatives(f'{prefix}_Cm', f'{prefix}_neural_net_input')
+        
+        else:
+            self.add_input('neural_net_input', shape=(num_nodes, 35))
+            self.add_output('Cm', shape=(num_nodes, ))
+            self.declare_derivatives('Cm', 'neural_net_input')
+
     
     def compute(self, inputs, outputs):
-        neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'])
-        outputs['Cm'] = neural_net(neural_net_input).detach().numpy().flatten()
+        neural_net = self.parameters['neural_net']        
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input'])
+            neural_net_prediction = neural_net(neural_net_input).detach().numpy()
+            outputs[f'{prefix}_Cm'] =  neural_net_prediction.flatten() #cl_output 
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input'])
+            neural_net_prediction = neural_net(neural_net_input).detach().numpy()
+            outputs['Cm'] =  neural_net_prediction # Cm_output 
+        
 
     def compute_derivatives(self, inputs, derivatives):
-        neural_net = self.parameters['neural_net']
-        neural_net_input = torch.tensor(inputs['neural_net_input'], dtype=torch.float32, requires_grad=True)
-        outputs = neural_net(neural_net_input)
+        neural_net = self.parameters['neural_net']        
+        prefix = self.parameters['prefix']
 
-        derivatives['Cm', 'neural_net_input'] =  torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
-
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input'])
+            first_derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivatives[f'{prefix}_Cm', f'{prefix}_neural_net_input'] =  first_derivative_numpy
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input'])
+            first_derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
+            derivatives['Cm', 'neural_net_input'] = first_derivative_numpy #scipy.linalg.block_diag(*derivatives_list)#
 
 class InverseCl(csdl.CustomExplicitOperation):
     def initialize(self):
@@ -189,9 +215,9 @@ class CpUpperModel(csdl.CustomExplicitOperation):
             self.declare_derivatives(f'{prefix}_CpUpper', f'{prefix}_neural_net_input_cp')
         else:
             self.add_input('neural_net_input_cp', shape=(num_nodes, 35))
-            self.add_output('CpUpper', shape=(num_nodes, 100))
+            self.add_output('cp_upper', shape=(num_nodes, 100))
 
-            self.declare_derivatives('CpUpper', 'neural_net_input_cp')
+            self.declare_derivatives('cp_upper', 'neural_net_input_cp')
 
     def compute(self, inputs, outputs):
         num_nodes = self.parameters['num_nodes']
@@ -203,7 +229,7 @@ class CpUpperModel(csdl.CustomExplicitOperation):
 
         else:
             neural_net_input = torch.Tensor(inputs['neural_net_input_cp'].reshape(num_nodes, 1, 35))
-            outputs['CpUpper'] = neural_net(neural_net_input).detach().numpy().flatten()
+            outputs['cp_upper'] = neural_net(neural_net_input).detach().numpy().flatten()
 
     def compute_derivatives(self, inputs, derivatives):
         num_nodes = self.parameters['num_nodes']
@@ -217,7 +243,7 @@ class CpUpperModel(csdl.CustomExplicitOperation):
         else:
             neural_net_input = torch.tensor(inputs['neural_net_input_cp'], dtype=torch.float32, requires_grad=True)
             derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
-            derivatives['CpUpper', 'neural_net_input_cp'] =  derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
+            derivatives['cp_upper', 'neural_net_input_cp'] =  derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
 
 class CpLowerModel(csdl.CustomExplicitOperation):
     def initialize(self):
@@ -238,8 +264,8 @@ class CpLowerModel(csdl.CustomExplicitOperation):
             self.declare_derivatives(f'{prefix}_CpLower', f'{prefix}_neural_net_input_cp')
         else:
             self.add_input('neural_net_input_cp', shape=(num_nodes, 35))
-            self.add_output('CpLower',shape=(num_nodes, 100))
-            self.declare_derivatives('CpLower', 'neural_net_input_cp')
+            self.add_output('cp_lower',shape=(num_nodes, 100))
+            self.declare_derivatives('cp_lower', 'neural_net_input_cp')
 
 
     def compute(self, inputs, outputs):
@@ -253,7 +279,7 @@ class CpLowerModel(csdl.CustomExplicitOperation):
         
         else:
             neural_net_input = torch.Tensor(inputs['neural_net_input_cp'].reshape(num_nodes, 1, 35))
-            outputs['CpLower'] = neural_net(neural_net_input).detach().numpy().flatten()
+            outputs['cp_lower'] = neural_net(neural_net_input).detach().numpy().flatten()
 
     def compute_derivatives(self, inputs, derivatives):
         num_nodes = self.parameters['num_nodes']
@@ -269,7 +295,7 @@ class CpLowerModel(csdl.CustomExplicitOperation):
             neural_net_input = torch.tensor(inputs['neural_net_input_cp'], dtype=torch.float32, requires_grad=True)
 
             derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
-            derivatives['CpLower', 'neural_net_input_cp'] = derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
+            derivatives['cp_lower', 'neural_net_input_cp'] = derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
 
 
 num_pts = 100
@@ -282,135 +308,306 @@ negative_stall_disp_thickness = 1e-4 * np.ones((num_pts, ))
 
 class DeltaStarUpperModel(csdl.CustomExplicitOperation):
     def initialize(self):
-        self.parameters.declare('neural_net')
         self.parameters.declare('num_nodes')
-        self.parameters.declare('X_max')
-        self.parameters.declare('X_min')
+        self.parameters.declare('neural_net')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+        
+        
+        # self.parameters.declare('X_max')
+        # self.parameters.declare('X_min')
 
     def define(self):
         num_nodes = self.parameters['num_nodes']
-        self.add_input('neural_net_input', shape=(num_nodes, 35))
-        self.add_output('DeltaStarUpper', shape=(num_nodes, 100))
+        prefix = self.parameters.declare('prefix', types=str, default=None, allow_none=True)
 
-        self.declare_derivatives('DeltaStarUpper', 'neural_net_input')
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input_dstar', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_dstar_upper', shape=(num_nodes, 100))
+            self.declare_derivatives(f'{prefix}_dstar_upper', f'{prefix}_neural_net_input_dstar')
+        else:
+            self.add_input('neural_net_input_dstar', shape=(num_nodes, 35))
+            self.add_output('dstar_upper',shape=(num_nodes, 100))
+            self.declare_derivatives('dstar_upper', 'neural_net_input_dstar')
+        
 
     def compute(self, inputs, outputs):
         num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'].reshape(num_nodes, 1, 35))
-        X_max = self.parameters['X_max']
-        X_min = self.parameters['X_min']
+        prefix = self.parameters['prefix']
         
-        # Unscale the data
-        neural_net_input_unscaled = inputs['neural_net_input'] * (X_max-X_min) + X_min
-        alpha = neural_net_input_unscaled[:, -3].reshape(num_nodes, 1)
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input_dstar'].reshape(num_nodes, 1, 35))
+            outputs[f'{prefix}_dstar_upper'] = neural_net(neural_net_input).detach().numpy().flatten()
         
-        self.positive_stall_indices = np.where(alpha>17)
-        self.negative_stall_indices = np.where(alpha<-8)
-    
-        output = neural_net(neural_net_input).detach().numpy()
-        output[self.positive_stall_indices[0]] = positive_stall_disp_thickness
-        output[self.negative_stall_indices[0]] = negative_stall_disp_thickness
-        outputs['DeltaStarUpper'] = output
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input_dstar'].reshape(num_nodes, 1, 35))
+            outputs['dstar_upper'] = neural_net(neural_net_input).detach().numpy().flatten()
     
     def compute_derivatives(self, inputs, derivatives):
         num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'].reshape(num_nodes, 1, 35))
-        neural_net_input.requires_grad = True
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_dstar'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives[f'{prefix}_dstar_upper', f'{prefix}_neural_net_input_dstar'] =  derivative_numpy 
         
-        derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
-        derivative_numpy[self.positive_stall_indices[0], :, :, self.positive_stall_indices[0], :, :] = 0
-        derivative_numpy[self.negative_stall_indices[0], :, :, self.negative_stall_indices[0], :, :] = 0
-        derivatives['DeltaStarUpper', 'neural_net_input'] = derivative_numpy 
+        else:
+            neural_net_input = torch.tensor(inputs['neural_net_input_dstar'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives['dstar_upper', 'neural_net_input_dstar'] = derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
+
 
 class DeltaStarLowerModel(csdl.CustomExplicitOperation):
     def initialize(self):
-        self.parameters.declare('neural_net')
         self.parameters.declare('num_nodes')
-        self.parameters.declare('X_max')
-        self.parameters.declare('X_min')
-
+        self.parameters.declare('neural_net')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+        
     def define(self):
         num_nodes = self.parameters['num_nodes']
-        self.add_input('neural_net_input', shape=(num_nodes, 35))
-        self.add_output('DeltaStarLower', shape=(num_nodes, 100))
+        prefix = self.parameters.declare('prefix', types=str, default=None, allow_none=True)
 
-        self.declare_derivatives('DeltaStarLower', 'neural_net_input')
-
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input_dstar', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_dstar_lower', shape=(num_nodes, 100))
+            self.declare_derivatives(f'{prefix}_dstar_lower', f'{prefix}_neural_net_input_dstar')
+        else:
+            self.add_input('neural_net_input_dstar', shape=(num_nodes, 35))
+            self.add_output('dstar_lower',shape=(num_nodes, 100))
+            self.declare_derivatives('dstar_lower', 'neural_net_input_dstar')
+        
 
     def compute(self, inputs, outputs):
         num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'].reshape(num_nodes, 1, 35))
-
-        X_max = self.parameters['X_max']
-        X_min = self.parameters['X_min']
+        prefix = self.parameters['prefix']
         
-        # Unscale the data
-        neural_net_input_unscaled = inputs['neural_net_input'] * (X_max-X_min) + X_min
-        alpha = neural_net_input_unscaled[:, -3].reshape(num_nodes, 1)
-
-        self.positive_stall_indices = np.where(alpha>17)
-        self.negative_stall_indices = np.where(alpha<-8)
-
-        output = neural_net(neural_net_input).detach().numpy()
-        output[self.positive_stall_indices[0]] = negative_stall_disp_thickness
-        output[self.negative_stall_indices[0]] = positive_stall_disp_thickness / 5
-        outputs['DeltaStarLower'] = output
-
-        # outputs['DeltaStarLower'] = neural_net(neural_net_input).detach().numpy().flatten()
-
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input_dstar'].reshape(num_nodes, 1, 35))
+            outputs[f'{prefix}_dstar_lower'] = neural_net(neural_net_input).detach().numpy().flatten()
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input_dstar'].reshape(num_nodes, 1, 35))
+            outputs['dstar_lower'] = neural_net(neural_net_input).detach().numpy().flatten()
+    
     def compute_derivatives(self, inputs, derivatives):
         num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'].reshape(num_nodes, 1, 35))
-        neural_net_input.requires_grad = True
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_dstar'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives[f'{prefix}_dstar_lower', f'{prefix}_neural_net_input_dstar'] =  derivative_numpy 
         
-        derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input).detach().numpy()
-        derivative_numpy[self.positive_stall_indices[0], :, :, self.positive_stall_indices[0], :, :] = 0
-        derivative_numpy[self.negative_stall_indices[0], :, :, self.negative_stall_indices[0], :, :] = 0
-        derivatives['DeltaStarLower', 'neural_net_input'] = derivative_numpy 
+        else:
+            neural_net_input = torch.tensor(inputs['neural_net_input_dstar'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives['dstar_lower', 'neural_net_input_dstar'] = derivative_numpy # torch.autograd.grad(outputs, neural_net_input)[0].detach().numpy().reshape(1, 35)
 
 
 class ThetaUpperModel(csdl.CustomExplicitOperation):
     def initialize(self):
         self.parameters.declare('neural_net')
         self.parameters.declare('num_nodes')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
         # self.parameters.declare('X_max')
         # self.parameters.declare('X_min')
 
     def define(self):
+
         num_nodes = self.parameters['num_nodes']
-        self.add_input('neural_net_input', shape=(num_nodes, 35))
-        self.add_output('ThetaUpper', shape=(num_nodes, 100))
+        prefix = self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input_theta', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_theta_upper', shape=(num_nodes, 100))
+            self.declare_derivatives(f'{prefix}_theta_upper', f'{prefix}_neural_net_input_theta')
+        else:
+            self.add_input('neural_net_input_theta', shape=(num_nodes, 35))
+            self.add_output('theta_upper',shape=(num_nodes, 100))
+            self.declare_derivatives('theta_upper', 'neural_net_input_theta')
 
     def compute(self, inputs, outputs):
         num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'].reshape(num_nodes, 1, 35))
-        outputs['ThetaUpper'] = neural_net(neural_net_input).detach().numpy().flatten()
+        prefix = self.parameters['prefix']
+        
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input_theta'].reshape(num_nodes, 1, 35))
+            outputs[f'{prefix}_theta_upper'] = neural_net(neural_net_input).detach().numpy().flatten()
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input_theta'].reshape(num_nodes, 1, 35))
+            outputs['theta_upper'] = neural_net(neural_net_input).detach().numpy().flatten()
+
+    def compute_derivatives(self, inputs, derivatives):
+        num_nodes = self.parameters['num_nodes']
+        neural_net = self.parameters['neural_net']
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_theta'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives[f'{prefix}_theta_upper', f'{prefix}_neural_net_input_theta'] =  derivative_numpy 
+        
+        else:
+            neural_net_input = torch.tensor(inputs['neural_net_input_theta'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives['theta_upper', 'neural_net_input_theta'] = derivative_numpy
 
 
 class ThetaLowerModel(csdl.CustomExplicitOperation):
     def initialize(self):
         self.parameters.declare('neural_net')
         self.parameters.declare('num_nodes')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
 
     def define(self):
         num_nodes = self.parameters['num_nodes']
-        self.add_input('neural_net_input', shape=(num_nodes, 35))
-        self.add_output('ThetaLower', shape=(num_nodes, 100))
+        prefix = self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input_theta', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_theta_lower', shape=(num_nodes, 100))
+            self.declare_derivatives(f'{prefix}_theta_lower', f'{prefix}_neural_net_input_theta')
+        else:
+            self.add_input('neural_net_input_theta', shape=(num_nodes, 35))
+            self.add_output('theta_lower',shape=(num_nodes, 100))
+            self.declare_derivatives('theta_lower', 'neural_net_input_theta')
 
     def compute(self, inputs, outputs):
         num_nodes = self.parameters['num_nodes']
         neural_net = self.parameters['neural_net']
-        neural_net_input = torch.Tensor(inputs['neural_net_input'].reshape(num_nodes, 1, 35))
-        outputs['ThetaLower'] = neural_net(neural_net_input).detach().numpy().flatten()
+        prefix = self.parameters['prefix']
+        
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input_theta'].reshape(num_nodes, 1, 35))
+            outputs[f'{prefix}_theta_lower'] = neural_net(neural_net_input).detach().numpy().flatten()
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input_theta'].reshape(num_nodes, 1, 35))
+            outputs['theta_lower'] = neural_net(neural_net_input).detach().numpy().flatten()
+
+    def compute_derivatives(self, inputs, derivatives):
+        num_nodes = self.parameters['num_nodes']
+        neural_net = self.parameters['neural_net']
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_theta'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives[f'{prefix}_theta_lower', f'{prefix}_neural_net_input_theta'] =  derivative_numpy 
+        
+        else:
+            neural_net_input = torch.tensor(inputs['neural_net_input_theta'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives['theta_lower', 'neural_net_input_theta'] = derivative_numpy
 
 
 
+class EdgeVelocityUpperModel(csdl.CustomExplicitOperation):
+    def initialize(self):
+        self.parameters.declare('neural_net')
+        self.parameters.declare('num_nodes')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+        # self.parameters.declare('X_max')
+        # self.parameters.declare('X_min')
 
+    def define(self):
+
+        num_nodes = self.parameters['num_nodes']
+        prefix = self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input_edge_velocity', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_edge_velocity_upper', shape=(num_nodes, 100))
+            self.declare_derivatives(f'{prefix}_edge_velocity_upper', f'{prefix}_neural_net_input_edge_velocity')
+        else:
+            self.add_input('neural_net_input_edge_velocity', shape=(num_nodes, 35))
+            self.add_output('edge_velocity_upper',shape=(num_nodes, 100))
+            self.declare_derivatives('edge_velocity_upper', 'neural_net_input_edge_velocity')
+
+    def compute(self, inputs, outputs):
+        num_nodes = self.parameters['num_nodes']
+        neural_net = self.parameters['neural_net']
+        prefix = self.parameters['prefix']
+        
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input_edge_velocity'].reshape(num_nodes, 1, 35))
+            outputs[f'{prefix}_edge_velocity_upper'] = neural_net(neural_net_input).detach().numpy().flatten()
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input_edge_velocity'].reshape(num_nodes, 1, 35))
+            outputs['edge_velocity_upper'] = neural_net(neural_net_input).detach().numpy().flatten()
+
+    def compute_derivatives(self, inputs, derivatives):
+        num_nodes = self.parameters['num_nodes']
+        neural_net = self.parameters['neural_net']
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_edge_velocity'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives[f'{prefix}_edge_velocity_upper', f'{prefix}_neural_net_input_edge_velocity'] =  derivative_numpy 
+        
+        else:
+            neural_net_input = torch.tensor(inputs['neural_net_input_edge_velocity'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives['edge_velocity_upper', 'neural_net_input_edge_velocity'] = derivative_numpy
+
+
+class EdgeVelocityLowerModel(csdl.CustomExplicitOperation):
+    def initialize(self):
+        self.parameters.declare('neural_net')
+        self.parameters.declare('num_nodes')
+        self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+        # self.parameters.declare('X_max')
+        # self.parameters.declare('X_min')
+
+    def define(self):
+
+        num_nodes = self.parameters['num_nodes']
+        prefix = self.parameters.declare('prefix', types=str, default=None, allow_none=True)
+
+        if prefix:
+            self.add_input(f'{prefix}_neural_net_input_edge_velocity', shape=(num_nodes, 35))
+            self.add_output(f'{prefix}_edge_velocity_lower', shape=(num_nodes, 100))
+            self.declare_derivatives(f'{prefix}_edge_velocity_lower', f'{prefix}_neural_net_input_edge_velocity')
+        else:
+            self.add_input('neural_net_input_edge_velocity', shape=(num_nodes, 35))
+            self.add_output('edge_velocity_lower',shape=(num_nodes, 100))
+            self.declare_derivatives('edge_velocity_lower', 'neural_net_input_edge_velocity')
+
+    def compute(self, inputs, outputs):
+        num_nodes = self.parameters['num_nodes']
+        neural_net = self.parameters['neural_net']
+        prefix = self.parameters['prefix']
+        
+        if prefix:
+            neural_net_input = torch.Tensor(inputs[f'{prefix}_neural_net_input_edge_velocity'].reshape(num_nodes, 1, 35))
+            outputs[f'{prefix}_edge_velocity_lower'] = neural_net(neural_net_input).detach().numpy().flatten()
+        
+        else:
+            neural_net_input = torch.Tensor(inputs['neural_net_input_edge_velocity'].reshape(num_nodes, 1, 35))
+            outputs['edge_velocity_lower'] = neural_net(neural_net_input).detach().numpy().flatten()
+
+    def compute_derivatives(self, inputs, derivatives):
+        num_nodes = self.parameters['num_nodes']
+        neural_net = self.parameters['neural_net']
+        prefix = self.parameters['prefix']
+
+        if prefix:
+            neural_net_input = torch.tensor(inputs[f'{prefix}_neural_net_input_edge_velocity'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives[f'{prefix}_edge_velocity_lower', f'{prefix}_neural_net_input_edge_velocity'] =  derivative_numpy 
+        
+        else:
+            neural_net_input = torch.tensor(inputs['neural_net_input_edge_velocity'], dtype=torch.float32, requires_grad=True)
+            derivative_numpy = torch.autograd.functional.jacobian(neural_net, neural_net_input.reshape(num_nodes, 1, 35)).detach().numpy()
+            derivatives['edge_velocity_lower', 'neural_net_input_edge_velocity'] = derivative_numpy
 
 
 

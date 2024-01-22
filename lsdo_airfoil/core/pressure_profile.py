@@ -7,11 +7,12 @@ from lsdo_modules.module_csdl.module_csdl import ModuleCSDL
 
 class PressureProfile(m3l.ExplicitOperation):
     def initialize(self, kwargs):
+        self.parameters.declare('name', types=str, default='pressure_operation')
         self.parameters.declare('component', default=None)
         self.parameters.declare('airfoil_name')
         self.parameters.declare('compute_control_points', default=False)
         self.parameters.declare('num_nodes', types=int, default=1)
-        self.parameters.declare('use_inverse_cl_map', types=bool)
+        self.parameters.declare('use_inverse_cl_map', types=bool, default=False)
         self.m3l_var_list_cl = None
         self.m3l_var_list_re = None
     
