@@ -49,9 +49,7 @@ setup(
         'setuptools',
         'wheel',
         'twine',
-        'csdl @ git+https://github.com/LSDOlab/csdl.git',
         'scipy',
-        'python_csdl_backend @ git+https://github.com/LSDOlab/python_csdl_backend.git',
         'torch',
     ],
     classifiers=[
