@@ -1,0 +1,44 @@
+LOAD e63_raw.txt
+RDEF xfoil_parameters.def 
+PANE 250
+PANE
+OPER
+Visc 120000.0
+M 0.25
+VPAR 
+
+PACC
+polar_file.txt
+
+ITER 1000
+alfa 10.0
+cpwr
+cpx.txt
+vplo 
+h 
+dump 
+bl_kinematic_shape_param.txt 
+dt 
+dump 
+bl_delta_star_theta_top_surface.txt 
+db 
+dump 
+bl_delta_star_theta_bottom_surface.txt 
+ue 
+dump 
+bl_edge_velocity.txt 
+cf 
+dump 
+bl_skin_friction_coeff.txt 
+cd 
+dump 
+bl_dissipation_coeff.txt 
+ct 
+dump 
+bl_max_shear_coeff.txt 
+rt 
+dump 
+bl_Re_theta.txt 
+
+
+quit
