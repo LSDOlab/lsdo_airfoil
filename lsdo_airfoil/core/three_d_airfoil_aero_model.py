@@ -355,7 +355,8 @@ class MLAirfoilCustomOp(csdl.CustomExplicitOperation):
             input_tensor_torch = torch.Tensor(scaled_input_tensor).to(device)
 
         if self.out_shape == (1, ):
-            d_model_d_scaled_tensor = torch.autograd.functional.jacobian(model, input_tensor_torch).cpu().detach().numpy()
+            # d_model_d_scaled_tensor = torch.autograd.functional.jacobian(model, input_tensor_torch).cpu().detach().numpy()
+            d_model_d_scaled_tensor = torch.func.vmap(torch.func.jacrev(model))(input_tensor_torch).cpu().detach().numpy()
             d_model_d_scaled_tensor = d_model_d_scaled_tensor.reshape((num_nodes, num_nodes, 3))
 
             d_scaled_tensor_d_tensor = (1/(self.X_max - self.X_min)).reshape((1, 3))
