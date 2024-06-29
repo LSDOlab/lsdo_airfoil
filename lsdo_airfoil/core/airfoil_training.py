@@ -10,8 +10,8 @@ import pickle
 
 
 # Run on GPU if available
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 torch.set_default_dtype(torch.float64)
 
 def define_model(

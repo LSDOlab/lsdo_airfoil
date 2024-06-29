@@ -9,7 +9,8 @@ from scipy.sparse import block_diag
 from lsdo_airfoil import UIUC_AIRFOILS
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 torch.set_default_dtype(torch.float64)
 
 
@@ -357,13 +358,14 @@ class MLAirfoilCustomOp(csdl.CustomExplicitOperation):
         if self.out_shape == (1, ):
             # d_model_d_scaled_tensor = torch.autograd.functional.jacobian(model, input_tensor_torch).cpu().detach().numpy()
             d_model_d_scaled_tensor = torch.func.vmap(torch.func.jacrev(model))(input_tensor_torch).cpu().detach().numpy()
-            d_model_d_scaled_tensor = d_model_d_scaled_tensor.reshape((num_nodes, num_nodes, 3))
+            # d_model_d_scaled_tensor = d_model_d_scaled_tensor.reshape((num_nodes, num_nodes, 3))
 
             d_scaled_tensor_d_tensor = (1/(self.X_max - self.X_min)).reshape((1, 3))
-            d_tensor_d_inputs = np.ones((num_nodes, 3))
+            # d_tensor_d_inputs = np.ones((num_nodes, 3))
 
-            d_model_d_tensor = np.einsum('ijk, lk->ijk', d_model_d_scaled_tensor, d_scaled_tensor_d_tensor)
-            d_model_d_inputs = np.einsum('ijk, jk->ik', d_model_d_tensor, d_tensor_d_inputs)
+            d_model_d_inputs = np.einsum('ijk, lk->ijk', d_model_d_scaled_tensor, d_scaled_tensor_d_tensor).reshape((-1, 3))
+            # d_model_d_tensor = np.einsum('ijk, lk->ijk', d_model_d_scaled_tensor, d_scaled_tensor_d_tensor)
+            # d_model_d_inputs = np.einsum('ijk, jk->ik', d_model_d_tensor, d_tensor_d_inputs)
 
             derivatives[self.quantity, "alpha"] = d_model_d_inputs[:, 0]
             derivatives[self.quantity, "Re"] = d_model_d_inputs[:, 1]
