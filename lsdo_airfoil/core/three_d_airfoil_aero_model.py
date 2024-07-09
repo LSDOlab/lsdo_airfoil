@@ -330,11 +330,10 @@ class MLAirfoilCustomOp(csdl.CustomExplicitOperation):
     def compute_derivatives(self, input_vals, outputs, derivatives):
         model = self.model
 
-        alpha = input_vals["alpha"]
         Re = input_vals["Re"]
         Ma = input_vals["Ma"]
 
-        num_nodes = alpha.flatten().shape[0]
+        num_nodes = Re.flatten().shape[0]
         
         if self.quantity == "alpha_Cl_min_max":
             input_tensor = np.zeros((num_nodes, 2))
@@ -346,6 +345,7 @@ class MLAirfoilCustomOp(csdl.CustomExplicitOperation):
             input_tensor_torch = torch.Tensor(scaled_input_tensor).to(device)
 
         else:
+            alpha = input_vals["alpha"]
             input_tensor = np.zeros((num_nodes, 3))
             input_tensor[:, 0] = alpha.flatten()
             input_tensor[:, 1] = Re.flatten()
@@ -374,7 +374,10 @@ class MLAirfoilCustomOp(csdl.CustomExplicitOperation):
         else:
             d_model_d_scaled_tensor = torch.func.vmap(torch.func.jacfwd(model))(input_tensor_torch).cpu().detach().numpy()
             if self.out_shape == (2, ):
-                d_scaled_tensor_d_tensor = (1/(self.X_max[0:2] - self.X_min[0:2])).reshape((1, 2))
+                if len(self.X_max.shape) == 1:
+                    d_scaled_tensor_d_tensor = (1/(self.X_max[0:2] - self.X_min[0:2])).reshape((1, 2))
+                else:
+                    d_scaled_tensor_d_tensor = (1/(self.X_max[:,0:2] - self.X_min[:,0:2])).reshape((1, 2))
                 d_model_d_inputs = np.einsum('ijk, mk->ijk', d_model_d_scaled_tensor, d_scaled_tensor_d_tensor)
 
                 derivatives[self.quantity, "Re"] = block_diag(tuple([block.reshape((2, 1)) for block in d_model_d_inputs[:, :, 0]]))
