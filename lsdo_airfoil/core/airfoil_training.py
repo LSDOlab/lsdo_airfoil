@@ -405,7 +405,7 @@ def get_ml_model(input_data, output_data, data_directory_path, type_="Cl", tune_
                     output = model(data)
                 
                     if type_ == "alpha_Cl_min_max":
-                        mask = 0
+                        mask = None
                     else:
                         Re = data[:, 1] * (10e6 - 1e5) + 1e5
                         Ma = data[:, 2] * 0.6 
@@ -420,7 +420,7 @@ def get_ml_model(input_data, output_data, data_directory_path, type_="Cl", tune_
                         penalty = 0
 
                     loss = F.mse_loss(output, target) + 10 * penalty
-                    if mask == 0:
+                    if mask is None:
                         weighted_loss = loss
                     else:
                         weighted_loss = ((1 + (10 -1) * mask) * loss).mean() 
