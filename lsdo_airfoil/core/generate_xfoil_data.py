@@ -7,6 +7,22 @@ import time
 
 from lsdo_airfoil import UIUC_AIRFOILS
 
+def remove_duplicates(x, y):
+    # Combine x and y into a single array for easy handling
+    combined = np.vstack((x, y)).T
+    
+    # Use np.unique to find unique rows based on the first column (x values)
+    unique_combined, indices = np.unique(combined[:, 0], return_index=True)
+    
+    # Extract the unique rows
+    unique_combined = combined[indices]
+    
+    # Split the unique_combined back into x and y
+    unique_x = unique_combined[:, 0]
+    unique_y = unique_combined[:, 1]
+    
+    return unique_x, unique_y
+
 def process_and_interpolate_data(data, x_interp, filter_=True):
     # 1) Get rid of data where x > 1
     x = data[:, 0]
@@ -53,10 +69,13 @@ def process_and_interpolate_data(data, x_interp, filter_=True):
     x_upper = (x_upper - np.min(x_upper)) / (np.max(x_upper) - np.min(x_upper))
     x_lower = (x_lower - np.min(x_lower)) / (np.max(x_lower) - np.min(x_lower))
 
+    x_lower_unique, y_lower_unique = remove_duplicates(x_lower, y_lower)
+    x_upper_unique, y_upper_unique = remove_duplicates(x_upper, y_upper)
+
 
     from scipy.interpolate import interp1d
-    y_interp_upper_fun = interp1d(x_upper, y_upper, kind='quadratic', bounds_error=False, fill_value="extrapolate")
-    y_interp_lower_fun = interp1d(x_lower, y_lower, kind='quadratic', bounds_error=False, fill_value="extrapolate")
+    y_interp_upper_fun = interp1d(x_upper_unique, y_upper_unique, kind='quadratic', bounds_error=False, fill_value="extrapolate")
+    y_interp_lower_fun = interp1d(x_lower_unique, y_lower_unique, kind='quadratic', bounds_error=False, fill_value="extrapolate")
     y_interp_upper = y_interp_upper_fun(x_interp)
     y_interp_lower = y_interp_lower_fun(x_interp)
 
