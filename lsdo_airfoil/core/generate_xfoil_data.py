@@ -123,21 +123,31 @@ def run_xfoil(
         x_interp = 0.5 + 0.5*np.sin(np.pi*(np.linspace(0., 1., num_interp)-0.5))
 
     uiuc_airfoils = os.listdir(os.fsencode(UIUC_AIRFOILS))
-    try:
-        airfoil_coords = np.loadtxt(
-            f'{UIUC_AIRFOILS}/{airfoil}/{airfoil}_raw.txt'
-        )
-    except:
-        raise Exception(f"Uknown airfoil. Available airfoils are {uiuc_airfoils}")
+    if "naca" in airfoil:
+        pass
+    else:
+        try:
+            airfoil_coords = np.loadtxt(
+                f'{UIUC_AIRFOILS}/{airfoil}/{airfoil}_raw.txt'
+            )
+        except:
+            raise Exception(f"Uknown airfoil. Available airfoils are {uiuc_airfoils}")
     
-    if plot_airfoil:
-        plt.plot(airfoil_coords[:, 0], airfoil_coords[:, 1])
-        ax = plt.gca()
-        ax.set_aspect('equal', adjustable='box')
-        plt.show()
+        if plot_airfoil:
+            plt.plot(airfoil_coords[:, 0], airfoil_coords[:, 1])
+            ax = plt.gca()
+            ax.set_aspect('equal', adjustable='box')
+            plt.show()
 
     parent_dir = os.getcwd()
-    os.chdir(f'{UIUC_AIRFOILS}/{Path(airfoil)}')
+    if "naca" in airfoil:
+        if os.path.exists(f'{UIUC_AIRFOILS}/{Path(airfoil)}'):
+            os.chdir(f'{UIUC_AIRFOILS}/{Path(airfoil)}')
+        else:
+            os.makedirs(f'{UIUC_AIRFOILS}/{airfoil}')
+            os.chdir(f'{UIUC_AIRFOILS}/{airfoil}')
+    else:
+        os.chdir(f'{UIUC_AIRFOILS}/{Path(airfoil)}')
     generate_data = True
     if force_regenerate_data is False:
         if os.path.isdir('aero_data'):
@@ -182,7 +192,10 @@ def run_xfoil(
                     path = f'{UIUC_AIRFOILS}/{Path(airfoil)}/{airfoil}'
                     
                     input_file = open("input_file.in", 'w')
-                    input_file.write(f"LOAD {airfoil}_raw.txt\n")
+                    if "naca" in airfoil:
+                        input_file.write(f"{airfoil}\n")
+                    else:
+                        input_file.write(f"LOAD {airfoil}_raw.txt\n")
                     input_file.write("RDEF xfoil_parameters.def \n")
                     # input_file.write(airfoil_folder_name + '\n')
                     input_file.write(f"PANE {pane}\n")
