@@ -106,12 +106,19 @@ def run_xfoil(
     mean_Ma = np.mean(mach_range)
 
     coefficients = np.zeros((1, 3))
-    cp_data = np.zeros((1, 2 * num_interp))
-    ue_data = np.zeros((1, 2 * num_interp))
-    cf_data = np.zeros((1, 2 * num_interp))
-    ds_data = np.zeros((1, 2 * num_interp))
-    t_data = np.zeros((1, 2 * num_interp))
-    shape_data = np.zeros((1, 2 * num_interp))
+    # cp_data = np.zeros((1, 2 * num_interp))
+    # ue_data = np.zeros((1, 2 * num_interp))
+    # cf_data = np.zeros((1, 2 * num_interp))
+    # ds_data = np.zeros((1, 2 * num_interp))
+    # t_data = np.zeros((1, 2 * num_interp))
+    # shape_data = np.zeros((1, 2 * num_interp))
+
+    cp_data = np.zeros((1, pane))
+    ue_data = np.zeros((1, pane))
+    cf_data = np.zeros((1, pane))
+    ds_data = np.zeros((1, pane))
+    t_data = np.zeros((1, pane))
+    shape_data = np.zeros((1, pane))
     
     inputs = np.zeros((1, 3))
 
@@ -160,8 +167,7 @@ def run_xfoil(
                 ds_data = np.load(f'aero_data/delta_star/delta_star_vs_x_aoa_{mean_alpha}_Re_{mean_Re}_M_{mean_Ma}.npy')
                 t_data = np.load(f'aero_data/theta/theta_vs_x_aoa_{mean_alpha}_Re_{mean_Re}_M_{mean_Ma}.npy')
                 cf_data = np.load(f'aero_data/skin_friction_coefficient/skin_friction_coeff_vs_x_aoa_{mean_alpha}_Re_{mean_Re}_M_{mean_Ma}.npy')
-
-
+                
                 return coeffs, cp_data, ue_data, cf_data, ds_data, t_data, shape_data, inputs, parent_dir
 
     if generate_data:
@@ -192,11 +198,12 @@ def run_xfoil(
                     path = f'{UIUC_AIRFOILS}/{Path(airfoil)}/{airfoil}'
                     
                     input_file = open("input_file.in", 'w')
+                    input_file.write("y\n")
+                    # input_file.write("RDEF XfoilDef.def \n")
                     if "naca" in airfoil:
                         input_file.write(f"{airfoil}\n")
                     else:
                         input_file.write(f"LOAD {airfoil}_raw.txt\n")
-                    input_file.write("RDEF xfoil_parameters.def \n")
                     # input_file.write(airfoil_folder_name + '\n')
                     input_file.write(f"PANE {pane}\n")
                     input_file.write("PANE\n")
@@ -204,16 +211,16 @@ def run_xfoil(
                     input_file.write("Visc {0}\n".format(Re))
                     input_file.write("M {0}\n".format(Ma))
                     input_file.write("VPAR \n")
-                    if transition_top != "free" or transition_bottom != "free":
-                        input_file.write("xtr \n")
-                        if transition_top != "free":
-                            input_file.write(f"{transition_top} \n")
-                        else:
-                            input_file.write("\n")
-                        if transition_bottom != "free":
-                            input_file.write(f"{transition_bottom} \n")
-                        else:
-                            input_file.write("\n")
+                    # if transition_top != "free" or transition_bottom != "free":
+                    #     input_file.write("xtr \n")
+                    #     if transition_top != "free":
+                    #         input_file.write(f"{transition_top} \n")
+                    #     else:
+                    #         input_file.write("\n")
+                    #     if transition_bottom != "free":
+                    #         input_file.write(f"{transition_bottom} \n")
+                    #     else:
+                    #         input_file.write("\n")
 
                     input_file.write("\n")
                     input_file.write("PACC\n")
@@ -223,42 +230,45 @@ def run_xfoil(
                     input_file.write("alfa {0}\n".format(alpha))
                     
                     # Distributions
-                    input_file.write('cpwr\n')
-                    input_file.write("cpx.txt\n")
+                    # input_file.write('cpwr\n')
+                    # input_file.write("cpx.txt\n")
 
-                    input_file.write('vplo \n')
+                    # input_file.write('vplo \n')
                     
-                    input_file.write('h \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_kinematic_shape_param.txt \n')
+                    # input_file.write('h \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_kinematic_shape_param.txt \n')
                     
-                    input_file.write('dt \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_delta_star_theta_top_surface.txt \n')
+                    # input_file.write('dt \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_delta_star_theta_top_surface.txt \n')
                 
-                    input_file.write('db \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_delta_star_theta_bottom_surface.txt \n')
+                    # input_file.write('db \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_delta_star_theta_bottom_surface.txt \n')
                 
-                    input_file.write('ue \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_edge_velocity.txt \n')
+                    # input_file.write('ue \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_edge_velocity.txt \n')
                 
-                    input_file.write('cf \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_skin_friction_coeff.txt \n')
+                    # input_file.write('cf \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_skin_friction_coeff.txt \n')
                     
-                    input_file.write('cd \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_dissipation_coeff.txt \n')
+                    # input_file.write('cd \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_dissipation_coeff.txt \n')
 
-                    input_file.write('ct \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_max_shear_coeff.txt \n')
+                    # input_file.write('ct \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_max_shear_coeff.txt \n')
 
-                    input_file.write('rt \n')
-                    input_file.write('dump \n')
-                    input_file.write('bl_Re_theta.txt \n')
+                    # input_file.write('rt \n')
+                    # input_file.write('dump \n')
+                    # input_file.write('bl_Re_theta.txt \n')
+
+                    input_file.write("dump BL.dat \n")
+                    input_file.write("cpwr Cp.dat \n")
 
                     input_file.write("\n\n")
                     input_file.write("quit\n")
@@ -296,94 +306,161 @@ def run_xfoil(
                         # load the data
                         polar_data = np.loadtxt("polar_file.txt", skiprows=12)
                         
-                        if os.path.exists("cpx.txt"):
-                            cp_x = np.loadtxt('cpx.txt')
-                            x = cp_x[:, 0]
-                            y = cp_x[:, 1]
-
-                            cp_x_upper, cp_x_lower, cp_y_upper, cp_y_lower, \
-                                cp_y_interp_upper, cp_y_interp_lower = process_and_interpolate_data(cp_x, x_interp, filter_=False)
-
-
-                        # Edge velocity
-                        if os.path.exists("bl_edge_velocity.txt"):
-                            bl_ue_x = np.loadtxt('bl_edge_velocity.txt')
-                            x = bl_ue_x[:, 0]
-                            y = bl_ue_x[:, 1]
+                        
+                        if os.path.exists("Cp.dat"):
+                            Cp = np.loadtxt("Cp.dat", skiprows=2)
+                            x_cp = Cp[:, 0]
+                        
+                        if os.path.exists("BL.dat"):
+                            BL_data = np.loadtxt("BL.dat", skiprows=1)
+                            print(BL_data.shape)
                             
-                            ue_x_upper, ue_x_lower, ue_y_upper, ue_y_lower, \
-                                ue_y_interp_upper, ue_y_interp_lower = process_and_interpolate_data(bl_ue_x, x_interp, filter_=False)
+                            x_all = BL_data[:, 1]
+                            y_all = BL_data[:, 2]
+                            mask = (x_all >= 0) & (x_all <= 1)
+                            x_norm_ind = np.where(mask)[0]
+                            x = x_all[x_norm_ind]
+                            y = y_all[x_norm_ind]
 
-                            # bl_edge_vs_x[i, :, :] = bl_ue_x
-
-                        # Shape parameter
-                        if os.path.exists("bl_kinematic_shape_param.txt"):
-                            bl_kin_param_x = np.loadtxt('bl_kinematic_shape_param.txt')
-                            # bl_kin_param_vs_x[i, :, :] = bl_kin_param_x
-                            x_shape = bl_kin_param_x[:, 0]
-                            y_shape = bl_kin_param_x[:, 1]
-
-                            shape_x_upper, shape_x_lower, shape_y_upper, shape_y_lower, \
-                                shape_y_interp_upper, shape_y_interp_lower = process_and_interpolate_data(bl_kin_param_x, x_interp, filter_=False)
-
-
-                        # Momentum & displacement thickness top
-                        if os.path.exists("bl_delta_star_theta_top_surface.txt"):
-                            bl_ds_t_top_x = np.loadtxt('bl_delta_star_theta_top_surface.txt')
-                            x_ds_t_top = bl_ds_t_top_x[:, 0]
-                            y_ds_t_top = bl_ds_t_top_x[:, 1]
-
-                            num_points = len(x_ds_t_top)
-
-                            # displacement thicknes top
-                            x_ds_top = x_ds_t_top[0:num_points//2]
-                            y_ds_top = y_ds_t_top[0:num_points//2]
-
-                            # momentum thickness top
-                            x_t_top = x_ds_t_top[num_points//2:]
-                            y_t_top = y_ds_t_top[num_points//2:]
-
-                        # Momentum & displacement thickness bottom
-                        if os.path.exists("bl_delta_star_theta_bottom_surface.txt"):
-                            bl_ds_t_bottom_x = np.loadtxt('bl_delta_star_theta_bottom_surface.txt')
-                            # bl_delta_theta_bottom_vs_x[i, :, :] = bl_ds_t_bottom_x
-                            x_ds_t_bottom = bl_ds_t_bottom_x[:, 0]
-                            y_ds_t_bottom = bl_ds_t_bottom_x[:, 1]
-
-                            num_points = len(x_ds_t_bottom)
-
-                            # displacement thicknes bottom
-                            x_ds_bottom = x_ds_t_bottom[0:num_points//2]
-                            y_ds_bottom = y_ds_t_bottom[0:num_points//2]
-
-                            # momentum thickness bottom
-                            x_t_bottom = x_ds_t_bottom[num_points//2:]
-                            y_t_bottom = y_ds_t_bottom[num_points//2:]
-
-                            x_t = np.hstack((x_t_top, x_t_bottom))
-                            y_t = np.hstack((y_t_top, y_t_bottom))
-
-                            t = np.vstack((x_t, y_t)).T
-
-                            x_ds = np.hstack((x_ds_top, x_ds_bottom))
-                            y_ds = np.hstack((y_ds_top, y_ds_bottom))
-
-                            ds = np.vstack((x_ds, y_ds)).T
-
-                            ds_x_upper, ds_x_lower, ds_y_upper, ds_y_lower, \
-                                ds_y_interp_upper, ds_y_interp_lower = process_and_interpolate_data(ds, x_interp, filter_=False)
+                            U_edge = np.absolute(BL_data[x_norm_ind, 3])
+                            d_star = BL_data[x_norm_ind, 4]
+                            theta = BL_data[x_norm_ind, 5]
+                            Cf = BL_data[x_norm_ind, 6]
+                            h_param = BL_data[x_norm_ind, 7]
                             
-                            t_x_upper, t_x_lower, t_y_upper, t_y_lower, \
-                                t_y_interp_upper, t_y_interp_lower = process_and_interpolate_data(t, x_interp, filter_=False)
+                        if polar_data.size != 0:
+                            polar_data = polar_data.reshape((-1, 7))
+                            print(Re, Ma, alpha)
+                            polar_data_array = np.zeros((1, 3))
+                            polar_data_array[0, 0] = polar_data[0, 1]
+                            polar_data_array[0, 1] = polar_data[0, 2]
+                            polar_data_array[0, 2] = polar_data[0, 4]
+                            coefficients = np.vstack((coefficients, polar_data_array))
+                        
+                            # Cp
+                            cp_data = np.vstack((cp_data, Cp[:, 2]))
+
+
+                            # Ue
+                            ue_data = np.vstack((ue_data, U_edge))
+
+                            # Cf 
+                            cf_data = np.vstack((cf_data, Cf))
+
+                            # ds
+                            ds_data = np.vstack((ds_data, d_star))
+
+                            # t
+                            t_data = np.vstack((t_data, theta))
+
+                            # shape
+                            shape_data = np.vstack((shape_data, h_param))
+
+                            # inputs
+                            input_data_array = np.zeros((1, 3))
+                            input_data_array[0, 0] = alpha 
+                            input_data_array[0, 1] = Re 
+                            input_data_array[0, 2] = Ma
+                            inputs = np.vstack((inputs, input_data_array))
+
+                            # plt.figure(5)
+                            # plt.scatter(x, y, s=4)
+                            # plt.show()
+                            # # print(h_param)
+                            # exit()
+                            # print(x)
+                            # print(x.shape)
+                            # print("\n")
+
+
+                        # if os.path.exists("cpx.txt"):
+                        #     cp_x = np.loadtxt('cpx.txt')
+                        #     x = cp_x[:, 0]
+                        #     y = cp_x[:, 1]
+
+                        #     cp_x_upper, cp_x_lower, cp_y_upper, cp_y_lower, \
+                        #         cp_y_interp_upper, cp_y_interp_lower = process_and_interpolate_data(cp_x, x_interp, filter_=False)
+
+
+                        # # Edge velocity
+                        # if os.path.exists("bl_edge_velocity.txt"):
+                        #     bl_ue_x = np.loadtxt('bl_edge_velocity.txt')
+                        #     x = bl_ue_x[:, 0]
+                        #     y = bl_ue_x[:, 1]
+                            
+                        #     ue_x_upper, ue_x_lower, ue_y_upper, ue_y_lower, \
+                        #         ue_y_interp_upper, ue_y_interp_lower = process_and_interpolate_data(bl_ue_x, x_interp, filter_=False)
+
+                        #     # bl_edge_vs_x[i, :, :] = bl_ue_x
+
+                        # # Shape parameter
+                        # if os.path.exists("bl_kinematic_shape_param.txt"):
+                        #     bl_kin_param_x = np.loadtxt('bl_kinematic_shape_param.txt')
+                        #     # bl_kin_param_vs_x[i, :, :] = bl_kin_param_x
+                        #     x_shape = bl_kin_param_x[:, 0]
+                        #     y_shape = bl_kin_param_x[:, 1]
+
+                        #     shape_x_upper, shape_x_lower, shape_y_upper, shape_y_lower, \
+                        #         shape_y_interp_upper, shape_y_interp_lower = process_and_interpolate_data(bl_kin_param_x, x_interp, filter_=False)
+
+
+                        # # Momentum & displacement thickness top
+                        # if os.path.exists("bl_delta_star_theta_top_surface.txt"):
+                        #     bl_ds_t_top_x = np.loadtxt('bl_delta_star_theta_top_surface.txt')
+                        #     x_ds_t_top = bl_ds_t_top_x[:, 0]
+                        #     y_ds_t_top = bl_ds_t_top_x[:, 1]
+
+                        #     num_points = len(x_ds_t_top)
+
+                        #     # displacement thicknes top
+                        #     x_ds_top = x_ds_t_top[0:num_points//2]
+                        #     y_ds_top = y_ds_t_top[0:num_points//2]
+
+                        #     # momentum thickness top
+                        #     x_t_top = x_ds_t_top[num_points//2:]
+                        #     y_t_top = y_ds_t_top[num_points//2:]
+
+                        # # Momentum & displacement thickness bottom
+                        # if os.path.exists("bl_delta_star_theta_bottom_surface.txt"):
+                        #     bl_ds_t_bottom_x = np.loadtxt('bl_delta_star_theta_bottom_surface.txt')
+                        #     # bl_delta_theta_bottom_vs_x[i, :, :] = bl_ds_t_bottom_x
+                        #     x_ds_t_bottom = bl_ds_t_bottom_x[:, 0]
+                        #     y_ds_t_bottom = bl_ds_t_bottom_x[:, 1]
+
+                        #     num_points = len(x_ds_t_bottom)
+
+                        #     # displacement thicknes bottom
+                        #     x_ds_bottom = x_ds_t_bottom[0:num_points//2]
+                        #     y_ds_bottom = y_ds_t_bottom[0:num_points//2]
+
+                        #     # momentum thickness bottom
+                        #     x_t_bottom = x_ds_t_bottom[num_points//2:]
+                        #     y_t_bottom = y_ds_t_bottom[num_points//2:]
+
+                        #     x_t = np.hstack((x_t_top, x_t_bottom))
+                        #     y_t = np.hstack((y_t_top, y_t_bottom))
+
+                        #     t = np.vstack((x_t, y_t)).T
+
+                        #     x_ds = np.hstack((x_ds_top, x_ds_bottom))
+                        #     y_ds = np.hstack((y_ds_top, y_ds_bottom))
+
+                        #     ds = np.vstack((x_ds, y_ds)).T
+
+                        #     ds_x_upper, ds_x_lower, ds_y_upper, ds_y_lower, \
+                        #         ds_y_interp_upper, ds_y_interp_lower = process_and_interpolate_data(ds, x_interp, filter_=False)
+                            
+                        #     t_x_upper, t_x_lower, t_y_upper, t_y_lower, \
+                        #         t_y_interp_upper, t_y_interp_lower = process_and_interpolate_data(t, x_interp, filter_=False)
 
                         
-                        if os.path.exists("bl_skin_friction_coeff.txt"):
-                            bl_cf_x = np.loadtxt('bl_skin_friction_coeff.txt')
-                            x = bl_cf_x[:, 0]
-                            y = bl_cf_x[:, 1]
+                        # if os.path.exists("bl_skin_friction_coeff.txt"):
+                        #     bl_cf_x = np.loadtxt('bl_skin_friction_coeff.txt')
+                        #     x = bl_cf_x[:, 0]
+                        #     y = bl_cf_x[:, 1]
 
-                            cf_x_upper, cf_x_lower, cf_y_upper, cf_y_lower, \
-                                cf_y_interp_upper, cf_y_interp_lower = process_and_interpolate_data(bl_cf_x, x_interp, filter_=False)
+                        #     cf_x_upper, cf_x_lower, cf_y_upper, cf_y_lower, \
+                        #         cf_y_interp_upper, cf_y_interp_lower = process_and_interpolate_data(bl_cf_x, x_interp, filter_=False)
 
 
                         # if os.path.exists("bl_dissipation_coeff.txt"):
@@ -411,94 +488,93 @@ def run_xfoil(
                             # np.save(f'aero_data//Re_theta/Reyn_theta_vs_x_aoa_{alpha}_Re_{Re}_M_{Ma}', bl_Re_theta)
 
 
-                        axs[0, 0].scatter(cp_x_upper, cp_y_upper, s=4, color='k')
-                        axs[0, 0].plot(x_interp, cp_y_interp_upper, color='k')
-                        axs[0, 0].scatter(cp_x_lower, cp_y_lower, s=4, color='b')
-                        axs[0, 0].plot(x_interp, cp_y_interp_lower, color='b')
+                        # axs[0, 0].scatter(cp_x_upper, cp_y_upper, s=4, color='k')
+                        # axs[0, 0].plot(x_interp, cp_y_interp_upper, color='k')
+                        # axs[0, 0].scatter(cp_x_lower, cp_y_lower, s=4, color='b')
+                        # axs[0, 0].plot(x_interp, cp_y_interp_lower, color='b')
 
-                        axs[0, 1].scatter(ue_x_upper, ue_y_upper, s=4, color='k')
-                        axs[0, 1].plot(x_interp, ue_y_interp_upper, color='k')
-                        axs[0, 1].scatter(ue_x_lower, ue_y_lower, s=4, color='b')
-                        axs[0, 1].plot(x_interp, ue_y_interp_lower, color='b')
+                        # axs[0, 1].scatter(ue_x_upper, ue_y_upper, s=4, color='k')
+                        # axs[0, 1].plot(x_interp, ue_y_interp_upper, color='k')
+                        # axs[0, 1].scatter(ue_x_lower, ue_y_lower, s=4, color='b')
+                        # axs[0, 1].plot(x_interp, ue_y_interp_lower, color='b')
 
-                        axs[0, 2].scatter(shape_x_upper, shape_y_upper, s=4, color='k')
-                        axs[0, 2].plot(x_interp, shape_y_interp_upper, color='k')
-                        axs[0, 2].scatter(shape_x_lower, shape_y_lower, s=4, color='b')
-                        axs[0, 2].plot(x_interp, shape_y_interp_lower, color='b')
+                        # axs[0, 2].scatter(shape_x_upper, shape_y_upper, s=4, color='k')
+                        # axs[0, 2].plot(x_interp, shape_y_interp_upper, color='k')
+                        # axs[0, 2].scatter(shape_x_lower, shape_y_lower, s=4, color='b')
+                        # axs[0, 2].plot(x_interp, shape_y_interp_lower, color='b')
 
-                        axs[1, 0].scatter(ds_x_upper, ds_y_upper, s=4, color='k')
-                        axs[1, 0].plot(x_interp, ds_y_interp_upper, color='k')
-                        axs[1, 0].scatter(ds_x_lower, ds_y_lower, s=4, color='b')
-                        axs[1, 0].plot(x_interp, ds_y_interp_lower, color='b')
+                        # axs[1, 0].scatter(ds_x_upper, ds_y_upper, s=4, color='k')
+                        # axs[1, 0].plot(x_interp, ds_y_interp_upper, color='k')
+                        # axs[1, 0].scatter(ds_x_lower, ds_y_lower, s=4, color='b')
+                        # axs[1, 0].plot(x_interp, ds_y_interp_lower, color='b')
                         
-                        axs[1, 1].scatter(t_x_upper, t_y_upper, s=4, color='k')
-                        axs[1, 1].plot(x_interp, t_y_interp_upper, color='k')
-                        axs[1, 1].scatter(t_x_lower, t_y_lower, s=4, color='b')
-                        axs[1, 1].plot(x_interp, t_y_interp_lower, color='b')
+                        # axs[1, 1].scatter(t_x_upper, t_y_upper, s=4, color='k')
+                        # axs[1, 1].plot(x_interp, t_y_interp_upper, color='k')
+                        # axs[1, 1].scatter(t_x_lower, t_y_lower, s=4, color='b')
+                        # axs[1, 1].plot(x_interp, t_y_interp_lower, color='b')
 
-                        axs[1, 2].scatter(cf_x_upper, cf_y_upper, s=4, color='k')
-                        axs[1, 2].plot(x_interp, cf_y_interp_upper, color='k')
-                        axs[1, 2].scatter(cf_x_lower, cf_y_lower, s=4, color='b')
-                        axs[1, 2].plot(x_interp, cf_y_interp_lower, color='b')
+                        # axs[1, 2].scatter(cf_x_upper, cf_y_upper, s=4, color='k')
+                        # axs[1, 2].plot(x_interp, cf_y_interp_upper, color='k')
+                        # axs[1, 2].scatter(cf_x_lower, cf_y_lower, s=4, color='b')
+                        # axs[1, 2].plot(x_interp, cf_y_interp_lower, color='b')
                         
-                        plt.tight_layout()
+                        # plt.tight_layout()
 
-                        # exit()
+                        # # exit()
 
-                        # Saving data
-                        # Coefficients
-                        if polar_data.size != 0:
-                            print(Re, Ma, alpha)
-                            polar_data_array = np.zeros((1, 3))
-                            polar_data_array[0, 0] = polar_data[1]
-                            polar_data_array[0, 1] = polar_data[2]
-                            polar_data_array[0, 2] = polar_data[4]
-                            coefficients = np.vstack((coefficients, polar_data_array))
+                        # # Saving data
+                        # # Coefficients
+                        # if polar_data.size != 0:
+                        #     print(Re, Ma, alpha)
+                        #     polar_data_array = np.zeros((1, 3))
+                        #     polar_data_array[0, 0] = polar_data[1]
+                        #     polar_data_array[0, 1] = polar_data[2]
+                        #     polar_data_array[0, 2] = polar_data[4]
+                        #     coefficients = np.vstack((coefficients, polar_data_array))
 
-                            # Cp
-                            cp_data_array = np.zeros((1, 2 * num_interp))
-                            cp_data_array[0, 0:num_interp] = cp_y_interp_upper
-                            cp_data_array[0, num_interp:] = cp_y_interp_lower
-                            cp_data = np.vstack((cp_data, cp_data_array))
+                        #     # Cp
+                        #     cp_data_array = np.zeros((1, 2 * num_interp))
+                        #     cp_data_array[0, 0:num_interp] = cp_y_interp_upper
+                        #     cp_data_array[0, num_interp:] = cp_y_interp_lower
+                        #     cp_data = np.vstack((cp_data, cp_data_array))
 
 
-                            # Ue
-                            ue_data_array = np.zeros((1, 2 * num_interp))
-                            ue_data_array[0, 0:num_interp] = ue_y_interp_upper
-                            ue_data_array[0, num_interp: ] = ue_y_interp_lower
-                            ue_data = np.vstack((ue_data, ue_data_array))
+                        #     # Ue
+                        #     ue_data_array = np.zeros((1, 2 * num_interp))
+                        #     ue_data_array[0, 0:num_interp] = ue_y_interp_upper
+                        #     ue_data_array[0, num_interp: ] = ue_y_interp_lower
+                        #     ue_data = np.vstack((ue_data, ue_data_array))
 
-                            # Cf 
-                            cf_data_array = np.zeros((1, 2 * num_interp))
-                            cf_data_array[0, 0:num_interp] = cf_y_interp_upper
-                            cf_data_array[0, num_interp: ] = cf_y_interp_lower
-                            cf_data = np.vstack((cf_data, cf_data_array))
+                        #     # Cf 
+                        #     cf_data_array = np.zeros((1, 2 * num_interp))
+                        #     cf_data_array[0, 0:num_interp] = cf_y_interp_upper
+                        #     cf_data_array[0, num_interp: ] = cf_y_interp_lower
+                        #     cf_data = np.vstack((cf_data, cf_data_array))
 
-                            # ds
-                            ds_data_array = np.zeros((1, 2 * num_interp))
-                            ds_data_array[0, 0:num_interp] = ds_y_interp_upper
-                            ds_data_array[0, num_interp: ] = ds_y_interp_lower
-                            ds_data = np.vstack((ds_data, ds_data_array))
+                        #     # ds
+                        #     ds_data_array = np.zeros((1, 2 * num_interp))
+                        #     ds_data_array[0, 0:num_interp] = ds_y_interp_upper
+                        #     ds_data_array[0, num_interp: ] = ds_y_interp_lower
+                        #     ds_data = np.vstack((ds_data, ds_data_array))
 
-                            # t
-                            t_data_array = np.zeros((1, 2 * num_interp))
-                            t_data_array[0, 0:num_interp] = t_y_interp_upper
-                            t_data_array[0, num_interp: ] = t_y_interp_lower
-                            t_data = np.vstack((t_data, t_data_array))
+                        #     # t
+                        #     t_data_array = np.zeros((1, 2 * num_interp))
+                        #     t_data_array[0, 0:num_interp] = t_y_interp_upper
+                        #     t_data_array[0, num_interp: ] = t_y_interp_lower
+                        #     t_data = np.vstack((t_data, t_data_array))
 
-                            # shape
-                            shape_data_array = np.zeros((1, 2 * num_interp))
-                            shape_data_array[0, 0:num_interp] = shape_y_interp_upper
-                            shape_data_array[0, num_interp: ] = shape_y_interp_lower
-                            shape_data = np.vstack((shape_data, shape_data_array))
+                        #     # shape
+                        #     shape_data_array = np.zeros((1, 2 * num_interp))
+                        #     shape_data_array[0, 0:num_interp] = shape_y_interp_upper
+                        #     shape_data_array[0, num_interp: ] = shape_y_interp_lower
+                        #     shape_data = np.vstack((shape_data, shape_data_array))
 
-                            # inputs
-                            input_data_array = np.zeros((1, 3))
-                            input_data_array[0, 0] = alpha 
-                            input_data_array[0, 1] = Re 
-                            input_data_array[0, 2] = Ma
-                            inputs = np.vstack((inputs, input_data_array))
-        
+                        #     # inputs
+                        #     input_data_array = np.zeros((1, 3))
+                        #     input_data_array[0, 0] = alpha 
+                        #     input_data_array[0, 1] = Re 
+                        #     input_data_array[0, 2] = Ma
+                        #     inputs = np.vstack((inputs, input_data_array))
         if save_data:
             np.save(f"aero_data/inputs/inputs_file_aoa_{mean_alpha}_Re_{mean_Re}_M_{mean_Ma}", inputs[1:, :])
             np.save(f"aero_data/aero_coefficients/coeffs_file_aoa_{mean_alpha}_Re_{mean_Re}_M_{mean_Ma}", coefficients[1:, :])
@@ -511,6 +587,9 @@ def run_xfoil(
 
         if False:
             plt.show()
+
+        print(cp_data)
+        print(ue_data)
 
         return coefficients[1:, :], cp_data[1:, :], ue_data[1:, :], cf_data[1:, :], ds_data[1:, :], t_data[1:, :], shape_data[1:, :], inputs[1:, :], parent_dir
 

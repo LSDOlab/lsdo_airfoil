@@ -10,8 +10,8 @@ import pickle
 
 
 # Run on GPU if available
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 torch.set_default_dtype(torch.float64)
 
 def define_model(
@@ -54,7 +54,7 @@ def train_three_d_airfoil_model_vector_valued(
     yt = raw_outputs
 
     # Convert to aoa to radians
-    xt[:, 0] = np.deg2rad(xt[:, 0])
+    # xt[:, 0] = np.deg2rad(xt[:, 0])
 
     output_data_dim = yt.shape[1]
 
@@ -111,7 +111,7 @@ def train_three_d_airfoil_model(
             filter = np.where(combined_condition)[0]
 
             if len(filter) > 0:
-                aoa_raw = np.deg2rad(raw_inputs[filter, -3])
+                aoa_raw = raw_inputs[filter, -3]
 
                 Cl = np.array([x for _, x in sorted(zip(aoa_raw, raw_outputs[filter, 0]))])
                 Cd = np.array([x for _, x in sorted(zip(aoa_raw, raw_outputs[filter, 1]))]) 
@@ -306,6 +306,8 @@ def train_three_d_airfoil_model(
     return model, X_max, X_min
     
 def get_ml_model(input_data, output_data, data_directory_path, type_="Cl", tune_hyper_parameters=False, num_trials=500):
+    if (output_data.shape[0] - input_data.shape[0]) == 1:
+        output_data = output_data[1:, :]
     X_train_raw, X_test_raw, y_train, y_test = train_test_split(input_data, output_data, train_size=0.70, shuffle=True)
 
     if len(y_test.shape) == 1:

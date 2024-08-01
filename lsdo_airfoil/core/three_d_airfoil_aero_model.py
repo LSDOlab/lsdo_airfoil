@@ -7,10 +7,11 @@ import os
 from typing import Union
 from scipy.sparse import block_diag
 from lsdo_airfoil import UIUC_AIRFOILS
+from copy import copy
 
 
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 torch.set_default_dtype(torch.float64)
 
 
@@ -24,26 +25,30 @@ class ThreeDAirfoilMLModelMaker:
         transition_top="free",
         transition_bottom="free",
         pane: int=250,
-        num_interp: int = 120,
+        num_interp: int = 125,
         x_spacing: str = "sin",
         power = 2,
         save_xfoil_data: bool = True, 
         force_regenerate_xfoil_data: bool = False,
+        use_x_from_data=False,
     ) -> None:
         csdl.check_parameter(airfoil_name, "airfoil_name", types=str)
         self.airfoil_name = airfoil_name
         self.aoa_range = aoa_range
         self.reynolds_range = reynolds_range
         self.mach_range = mach_range
-        self.num_interp = 120
+        self.num_interp = num_interp
         self.x_spacing = x_spacing
 
-        if x_spacing == "linear":
-            self.x_interp = np.linspace(0., 1., num_interp)
-        elif x_spacing == "power":
-            self.x_interp = np.linspace(0., 1, num_interp)**power
-        elif x_spacing == "sin":
-            self.x_interp = 0.5 + 0.5*np.sin(np.pi*(np.linspace(0., 1., num_interp)-0.5))
+        if use_x_from_data:
+            pass
+        else:
+            if x_spacing == "linear":
+                self.x_interp = np.linspace(0., 1., num_interp)
+            elif x_spacing == "power":
+                self.x_interp = np.linspace(0., 1, num_interp)**power
+            elif x_spacing == "sin":
+                self.x_interp = 0.5 + 0.5*np.sin(np.pi*(np.linspace(0., 1., num_interp)-0.5))
 
         # Run xfoil or load saved results
         self.coeffs, self.Cp_data, self.Ue_data, \
@@ -60,12 +65,27 @@ class ThreeDAirfoilMLModelMaker:
             x_spacing=x_spacing,
             force_regenerate_data=force_regenerate_xfoil_data,
         )
+        
+        self.inputs[:, 0] *= np.pi / 180
+
+        if use_x_from_data:
+            Cp_data = np.loadtxt("Cp.dat", skiprows=2)
+            self.x_interp = Cp_data[:, 0]
 
         if os.path.isdir('regressions'):
             pass
         else:
             os.makedirs('regressions')
 
+
+        # print(self.inputs)
+        # import matplotlib.pyplot as plt
+        # plt.plot(self.x_interp, self.Cf_data[0, :])
+        # plt.plot(self.x_interp, self.Cf_data[-1, :])
+        # print("HI", self.Cp_data.shape)
+        # print("HI", self.Ue_data.shape)
+        # plt.show()
+        # exit()
 
     def get_airfoil_model(
         self,
@@ -190,7 +210,7 @@ class ThreeDAirfoilMLModelMaker:
                 )
             
             else:
-                raise NotImplementedError("Unkown airfoil model output quantity")
+                raise NotImplementedError(f"Unkown airfoil model output quantity")
 
             if quantity in ["Cl", "Cd"]:
                 out_shape = (1, )

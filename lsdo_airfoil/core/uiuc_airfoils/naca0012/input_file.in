@@ -1,0 +1,19 @@
+y
+naca0012
+PANE 250
+PANE
+OPER
+Visc 2000000.0
+M 0.5
+VPAR 
+
+PACC
+polar_file.txt
+
+ITER 1000
+alfa 8.0
+dump BL.dat 
+cpwr Cp.dat 
+
+
+quit
